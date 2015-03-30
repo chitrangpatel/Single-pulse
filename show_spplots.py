@@ -1,5 +1,12 @@
 #! /usr/bin/env python
 
+"""
+Plot single pulse plots(same as those produced by waterfaller.py).
+
+Input: .npz file 
+
+"""
+
 import glob
 import sys
 import numpy as np

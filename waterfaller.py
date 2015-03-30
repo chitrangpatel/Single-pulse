@@ -3,10 +3,18 @@
 """
 waterfaller.py
 
-Make waterfall plots to show frequency sweep of a single pulse.
-Reads SIGPROC filterbank format.
+Automatically generate single pulse plots for rank 4, 5, 6 and 7 groups according to the "RRATtrap" algorithm by Chen Karako. 
 
+Waterfall plots to show frequency sweep of a single pulse.
 Patrick Lazarus - Aug. 19, 2011
+
+signal to noise vs DM plot of the single pulse.
+DM vs time plot.
+
+Reads psrFits format.
+
+Chitrang Patel - Mar. 30, 2015
+
 """
 
 import sys
@@ -136,12 +144,6 @@ def maskfile(data, start_bin, nbinsextra):
     return data
 def waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, data):
 
-    """
-	Make waterfall plots to show frequency sweep of a single pulse.
-	Reads SIGPROC filterbank format.
-
-	Patrick Lazarus - Aug. 19, 2011
-    """
     if dm is not None:
         nbinsextra = np.round((duration + dmfac * subdm)/rawdatafile.tsamp).astype('int')
     else:
