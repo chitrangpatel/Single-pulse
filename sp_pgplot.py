@@ -2,11 +2,9 @@
 
 ## Automatically adapted for numpy Apr 14, 2006 by convertcode.py
 
-# Routine for easy to use 2-D waterfall plot and DM vs Time plot 
-#       using 'PGPLOT' and the Python 'PPGPLOT' package
-#       
-# Written by Chitrang Patel (chitrang.patel@mail.mcgill.ca)
-#         last revision: 27 Mar 2015
+# Routine for easy to use 1-D and 2-D plotting using 'PGPLOT'
+#       and the Python 'PPGPLOT' package
+#
 # Written by Scott M. Ransom (ransom@cfa.harvard.edu)
 #          last revision: 01 Jul 2000
 #
@@ -173,11 +171,11 @@ def read_sp_files(i):
         Return 5 arrays (properties of all single pulses):
                 DM, sigma, time, sample, downfact."""
 
-    finput = fileinput.input(glob.glob('*DM%i.*0.singlepulse'%i))
+    finput = fileinput.input(glob.glob('singlepulse/singlepulse_files/*DM%i.*.singlepulse'%i))
     data = Num.loadtxt(finput,
-                       dtype=Num.dtype([('dm', 'float64'),
+                       dtype=Num.dtype([('dm', 'float32'),
                                         ('sigma','float32'),
-                                        ('time','float64'),
+                                        ('time','float32'),
                                         ('sample','uint32'),
                                         ('downfact','uint8')]))
     return Num.atleast_2d(data)
@@ -191,9 +189,9 @@ def gen_arrays(dm, threshold):
     ddm = min_dm-diff_dm
     if (ddm <= 0):
         ddm = 0
-    dmss = Num.zeros((1,)).astype('float64')
+    dmss = Num.zeros((1,)).astype('float32')
     timess = Num.zeros((1,)).astype('float32')
-    sigmass = Num.zeros((1,)).astype('float64')
+    sigmass = Num.zeros((1,)).astype('float32')
     ind = []
     for i in range(ddm,(max_dm+diff_dm)):
 	data = read_sp_files(i)[0]

@@ -3,10 +3,10 @@
 import glob
 import sys
 import numpy as np
-import waterfaller_pgplot
+import waterfaller
 import spinfo
 
-from Pgplot_waterfaller import *
+from sp_pgplot import *
 from subprocess import Popen, PIPE
 
 
@@ -47,7 +47,7 @@ sweeped_start = float(text_array[23])
 
 
 # Dedispersed waterfall plot - zerodm - OFF
-array = npzfile['Data_dedisp_nozerodm']
+array = npzfile['Data_dedisp_nozerodm'].astype(np.float64)
 ppgplot.pgopen('%.2f_dm_%.2f_s_rank_%i_group.npz.ps/VPS'%(subdm, (start+0.25*duration), rank))
 ppgplot.pgpap(10.25, 8.5/11.0)
 
@@ -62,8 +62,8 @@ ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - Off")
 plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp], rangey = [min_freq, max_freq], image = 'apjgrey')
 
  #### Plot Dedispersed Time series - Zerodm filter - Off
-Dedisp_ts = npzfile['Dedisp_ts_nozerodm']
-times = npzfile['times_nozerodm']
+Dedisp_ts = array[::-1].sum(axis = 0)
+times = np.arange(datanumspectra)*datasamp
 ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
 ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
 ppgplot.pgsch(0.8)
@@ -90,11 +90,11 @@ ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
 ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time - %.2f s"%datastart)
 ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
 ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - On")
-array = npzfile['Data_dedisp_zerodm']
+array = npzfile['Data_dedisp_zerodm'].astype(np.float64)
 plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp],rangey = [min_freq, max_freq],image = 'apjgrey')
 #### Plot Dedispersed Time series - Zerodm filter - On
-dedisp_ts = npzfile['Dedisp_ts_zerodm']
-times = npzfile['times_zerodm']
+dedisp_ts = array[::-1].sum(axis = 0)
+times = np.arange(datanumspectra)*datasamp
 ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
 ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
 ppgplot.pgsch(0.8)
@@ -110,7 +110,7 @@ ppgplot.pgerrb(5, errx1, erry1, errx2, 1.0)
 ppgplot.pgpt(errx1, erry1, -1)
 
 # Sweeped waterfall plot Zerodm - OFF
-array = npzfile['Data_nozerodm']
+array = npzfile['Data_nozerodm'].astype(np.float64)
 ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
 ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
 ppgplot.pgsch(0.8)
@@ -128,7 +128,7 @@ ppgplot.pgsci(1)
 ppgplot.pgslw(3)
 
 # Sweeped waterfall plot Zerodm - ON
-array = npzfile['Data_zerodm']
+array = npzfile['Data_zerodm'].astype(np.float64)
 ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
 ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
 ppgplot.pgsch(0.8)
@@ -136,8 +136,6 @@ ppgplot.pgslw(4)
 ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
 ppgplot.pgsch(3)
 plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
-delays = npzfile['delays_zerodm']
-freqs = npzfile['freqs_zerodm']
 ppgplot.pgslw(5)
 sweepstart = sweeped_start- 0.2*sweep_duration
 ppgplot.pgsci(0)
@@ -163,8 +161,8 @@ ppgplot.pgsvp(0.07, 0.7, 0.01, 0.05)
 ppgplot.pgmtxt('T', -2.1, 0.01, 0.0, "%s" %fn)
 
 #DM vs SNR
-dm_arr = npzfile['dm_arr']
-sigma_arr = npzfile['sigma_arr']
+dm_arr = np.float32(npzfile['dm_arr'])
+sigma_arr = np.float32 (npzfile['sigma_arr'])
 ppgplot.pgsvp(0.48, 0.73, 0.65, 0.90)
 ppgplot.pgswin(np.min(dm_arr), np.max(dm_arr), 0.95*np.min(sigma_arr), 1.05*np.max(sigma_arr))
 ppgplot.pgsch(0.8)
@@ -176,11 +174,11 @@ ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Signal-to-noise")
 ppgplot.pgpt(dm_arr, sigma_arr, 20)
 
 # DM vs Time
-dm_range = npzfile['dm_range']
-time_range = npzfile['time_range']
-sigma_range = npzfile['sigma_range']
-dm_list = npzfile['dm_list']
-time_list = npzfile['time_list']
+dm_range = map(np.float32, npzfile['dm_range'])
+time_range = map(np.float32, npzfile['time_range'])
+sigma_range = map(np.float32, npzfile['sigma_range'])
+dm_list = map(np.float32, npzfile['dm_list'])
+time_list = map(np.float32, npzfile['time_list'])
 dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
 
 ppgplot.pgiden()

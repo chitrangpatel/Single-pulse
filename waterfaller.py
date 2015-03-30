@@ -24,7 +24,7 @@ import matplotlib.cm
 import numpy as np
 import scipy
 
-from Pgplot_waterfaller import *
+from sp_pgplot import *
 
 import psr_utils
 import rfifind
@@ -37,11 +37,16 @@ DEBUG = True
 def print_debug(msg):
     if DEBUG:
 	print msg
-#Read in the File
 def get_textfile():
+    """ Read in the groups.txt file.
+	Contains information about the DM, time, box car width, signal to noise, sample number and rank	       of groups. 
+    """
     return  np.loadtxt(glob.glob('groups*')[0],dtype='str',delimiter='\n')
 #Get The parameters  
 def group_info(rank):
+    """
+	Extracts out relevant information from the groups.txt file as strings. 
+    """
     file = get_textfile()
     lis=np.where(file == '\tRank:             %i.000000'%rank)[0]#Checks for this contidion and gives its indices where true.
     # Extract the Max_ sigma value for the required parameters
@@ -64,6 +69,9 @@ def group_info(rank):
         parameters.append(params)
     return temp_lines, parameters 
 def split_parameters(rank):
+    """
+	Splits the string into individual parameters and converts them into floats/int. 
+    """
     temp_values = group_info(rank)[1]
     final_parameters=[]
     for i in range(len(temp_values)):
@@ -104,6 +112,15 @@ def get_mask(rfimask, startsamp, N):
         mask[blocknums==blocknum] = blockmask
     return mask.T
 def maskfile(data, start_bin, nbinsextra):
+    """
+	Performs the masking on the raw data using the boolean array from get_mask.
+	Inputs:
+	    data: raw data (psrfits object) 
+	    start_bin: the sample number where we want the waterfall plot window to start.
+	    nbinsextra: number of bins in the waterfall plot
+	Output:
+	    data: 2D array after masking. 
+    """
     print 'reading maskfile'
     maskfile = glob.glob('*.mask')[0]
     #maskfile = None
@@ -118,6 +135,13 @@ def maskfile(data, start_bin, nbinsextra):
 	print 'masked'
     return data
 def waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, data):
+
+    """
+	Make waterfall plots to show frequency sweep of a single pulse.
+	Reads SIGPROC filterbank format.
+
+	Patrick Lazarus - Aug. 19, 2011
+    """
     if dm is not None:
         nbinsextra = np.round((duration + dmfac * subdm)/rawdatafile.tsamp).astype('int')
     else:
@@ -137,10 +161,8 @@ def waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integr
         data.dedisperse(dm, padval='mean')
 
     # Downsample
-    #downsampto = 5 
-    #ragfac = float(nbins)/nbinsextra
-    #downsamp = max(1, int(ragfac*data.data.shape[-1]/downsampto/binratio))
     data.downsample(downsamp)
+
     # scale data
     data = data.scaled(scaleindep)
    	    
@@ -191,44 +213,43 @@ def main():
                 sample_number = values[ii][3]
                 width_bins = values[ii][4]
                 binratio = 50
-                #duration = 0.1
                 scaleindep = False
                 zerodm = None
-                #downsampto = 5
                 downsamp = np.round((values[ii][2]/sample_number/6.54761904761905e-05)).astype('int')
                 duration = binratio * width_bins * rawdatafile.tsamp *downsamp
                 start = values[ii][2] - (0.25 * duration)
 		if (start<0.0):
 		    start = 0.0
                 pulse_width = width_bins*downsamp*6.54761904761905e-05
-                #nsub = 64
                 if sigma <= 10:
                     nsub = 32
                 elif sigma >= 10 and sigma < 15:
                     nsub = 64
                 else:
                     nsub = 96
-        	    #Read data
        	        nbins = np.round(duration/rawdatafile.tsamp).astype('int')
        	        start_bin = np.round(start/rawdatafile.tsamp).astype('int')
                 dmfac = 4.15e3 * np.abs(1./rawdatafile.frequencies[0]**2 - 1./rawdatafile.frequencies[-1]**2)
                 nbinsextra = np.round((duration + dmfac * dm)/rawdatafile.tsamp).astype('int')
-		text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, values[ii][2]])
-
 		if (start_bin+nbinsextra) > N-1:
 		    nbinsextra = N-1-start_bin
+
     		dat = rawdatafile.get_spectra(start_bin, nbinsextra)
 		masked_dat = maskfile(dat, start_bin, nbinsextra)
 		zerodm_masked_dat = copy.copy(masked_dat)
 		sweepdm_masked_dat = copy.copy(zerodm_masked_dat)
-                ####Dedispersed without zerodm
+
+		#make an array to store header information for the .npz files
+		text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, values[ii][2]])
+                # Plotting Dedispersed waterfall plot - zerodm - OFF
                 data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+		# Add additional information to the header information array
 		text_array = np.append(text_array,data.starttime)
 		text_array = np.append(text_array,data.dt)
 		text_array = np.append(text_array,data.numspectra)
 		text_array = np.append(text_array,data.freqs.min())
 		text_array = np.append(text_array,data.freqs.max())
-		Data = np.array(data.data)#[..., :bins]
+		Data = np.array(data.data)
                 ragfac = float(nbins)/bins
                 dmrange, trange = Data.shape
                 nbinlim = np.int(trange * ragfac)
@@ -253,9 +274,7 @@ def main():
                 integrate_dm = subdm
 		zerodm = None
                 Dedisp_ts = Data.sum(axis=0)
-		Dedisp_ts_nozerodm = Dedisp_ts
                 times = np.arange(data.numspectra)*data.dt+data.starttime-start
-		times_nozerodm = times
                 ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
                 ppgplot.pgswin(data.starttime - start, data.starttime-start+duration, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
                 ppgplot.pgsch(0.8)
@@ -265,7 +284,6 @@ def main():
                 ppgplot.pgline(times,Dedisp_ts)
 		ppgplot.pgslw(3)
 		ppgplot.pgsci(1)
-                #N = np.array([1])
                 errx1 = np.array([0.60 * (data.starttime-start+duration)])
                 erry1 = np.array([0.60 * np.max(Dedisp_ts)])
                 erry2 = np.array([np.std(Dedisp_ts)])
@@ -279,7 +297,7 @@ def main():
     		#if zerodm is not None:
         	#    data.data -=  data.data.mean(axis=0)
                 data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, zerodm_masked_dat)
-		Data = np.array(data.data)#[..., :bins]
+		Data = np.array(data.data)
                 array = Data[..., :nbinlim]
                 array = array[::-1]
 		Data_dedisp_zerodm = array
@@ -295,8 +313,6 @@ def main():
        	        #### Plot Dedispersed Time series - Zerodm filter - On
                 times = np.arange(data.numspectra)*data.dt+data.starttime-start
                 dedisp_ts = Data.sum(axis=0)
-		Dedisp_ts_zerodm = dedisp_ts
-		times_zerodm = times
                 ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
                 ppgplot.pgswin(data.starttime - start, data.starttime-start+duration, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
                 ppgplot.pgsch(0.8)
@@ -386,8 +402,6 @@ def main():
                     ddm = sweep_dm-data.dm
             	    delays = psr_utils.delay_from_DM(ddm, data.freqs)
             	    delays -= delays.min()
-		    delays_zerodm = delays
-		    freqs_zerodm = data.freqs
             	    ppgplot.pgslw(5)
             	    sweepstart = data.starttime-0.2*sweep_duration
             	    ppgplot.pgsci(0)
@@ -435,7 +449,7 @@ def main():
                 sigma_range = sigmas
                 sigmas = sigma_range
                 dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
-		np.savez("%.2f_dm_%.2f_s_rank_%i_group_waterfall" %(subdm, values[ii][2], rank),Data_dedisp_nozerodm = Data_dedisp_nozerodm, Dedisp_ts_nozerodm = Dedisp_ts_nozerodm , times_nozerodm =times_nozerodm, Data_dedisp_zerodm=Data_dedisp_zerodm, Data_nozerodm=Data_nozerodm, Dedisp_ts_zerodm = Dedisp_ts_zerodm, times_zerodm = times_zerodm,delays_nozerodm = delays_nozerodm, delays_zerodm = delays_zerodm, freqs_nozerodm = freqs_nozerodm, freqs_zerodm = freqs_zerodm ,Data_zerodm=Data_zerodm,dm_range=dm_range, time_range=time_range, sigma_range=sigma_range, dm_arr=dm_arr, sigma_arr=sigma_arr, dm_list=dm_list, time_list=time_list, text_array = text_array)
+		np.savez_compressed("%.2f_dm_%.2f_s_rank_%i_group_waterfall" %(subdm, values[ii][2], rank),Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_range= map(np.float16,dm_range), time_range= map(np.float16, time_range), sigma_range= map(np.float16, sigma_range), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array)
                 ppgplot.pgiden()
                 ppgplot.pgclos()
                 Popen(["convert", "-flatten", "%.2f_dm_%.2f_s_rank_%i_group.ps"%(subdm, values[ii][2], rank), "%.2f_dm_%.2f_s_rank_%i_group.png"%(subdm, values[ii][2], rank)], stdout=PIPE, stderr=PIPE)
