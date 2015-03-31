@@ -7,7 +7,9 @@
 #
 # Written by Scott M. Ransom (ransom@cfa.harvard.edu)
 #          last revision: 01 Jul 2000
-#
+# Modified by Chitrang Patel
+#          last revision: 30 March 2015
+
 # 'PGPLOT' was writtten by Tim Pearson <tjp@astro.caltech.edu>,
 # and can be found at http://astro.caltech.edu/~tjp/pgplot/
 #

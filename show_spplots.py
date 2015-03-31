@@ -1,10 +1,11 @@
 #! /usr/bin/env python
 
 """
-Plot single pulse plots(same as those produced by waterfaller.py).
+Plot single pulse plots(same as those produced by sp_pipeline.py).
 
 Input: .npz file 
 
+latest revision: Chitrang Patel - 30 March 2015
 """
 
 import glob
