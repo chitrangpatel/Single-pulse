@@ -12,7 +12,6 @@ import glob
 import sys
 import numpy as np
 import waterfaller
-import spinfo
 
 from sp_pgplot import *
 from subprocess import Popen, PIPE
