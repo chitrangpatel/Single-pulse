@@ -1,7 +1,5 @@
 import numpy as np
 
-an_npz_file = "/homes/borg/madsense/PALFA/single_pulse_ratings/npz_files/100.90_dm_163.66_s_rank_6_group_waterfall.npz"
-
 class SPcand:
     """
     A class for reading in single pulse candidate files.
@@ -121,7 +119,5 @@ class SPcand:
         self.max_freq = float(ll[21])
         self.sweep_duration = float(ll[22])
         self.sweep_start_time = float(ll[23])
-
-data = SPcand(an_npz_file)
 
 
