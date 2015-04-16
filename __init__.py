@@ -35,6 +35,10 @@ class SPcand:
         Right ascension as hh:mm:ss.s string
      dec
         Declination as dd:mm:ss.s string
+     ra_deg
+        Right ascension in degrees
+     dec_deg
+        Declination in degrees
      mjd
         Observation MJD
      total_obs_time
@@ -95,12 +99,17 @@ class SPcand:
         self.dmsweep_freqs = dd['freqs_nozerodm']
 
         ll = dd['text_array']
+        
         self.filename = ll[0]
         self.telescope = ll[1]
         self.ra = ll[2]
         self.dec = ll[3]
+        self.ra_deg = np.sum(np.array(self.ra.split(":"), dtype=float) * np.array([15., 15./60., 15./3600.]))
+        dec_arr = np.array(self.dec.split(":"), dtype=float)
+        self.dec_deg = np.sum(np.abs(dec_arr) * np.sign(dec_arr[0]) * np.array([1., 1./60., 1./3600.]))
         self.mjd = float(ll[4])
         self.total_obs_time = float(ll[15])
+
         self.rank = int(ll[5])
         self.tsamp = float(ll[14])
         self.best_dm = float(ll[8])
