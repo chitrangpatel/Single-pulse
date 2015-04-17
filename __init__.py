@@ -1,8 +1,8 @@
 import numpy as np
 
-class SPcand:
+class spd:
     """
-    A class for reading in single pulse candidate files.
+    A class for reading in single pulse files.
 
     A quick description of each item in the class:
 
