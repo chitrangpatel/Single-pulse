@@ -129,4 +129,21 @@ class spd:
         self.sweep_duration = float(ll[22])
         self.sweep_start_time = float(ll[23])
 
+    def waterfall_time_axis(self, use_timeseries_time=False):
+        """
+        Generate a time axis for the waterfall plot in seconds, either beginning
+        at zero or at the duration into the time series at which the plot actually
+        begins.
+        """
+        self.waterfall_tsamp
+        self.waterfall_start_time
+        self.waterfall_nbins
+        time_axis = np.arange(0, self.waterfall_duration, self.waterfall_tsamp)[:self.waterfall_nbins]
+        if use_timeseries_time: return time_axis + self.waterfall_start_time
+        else: return time_axis
 
+    def waterfall_freq_axis(self):
+        """
+        Generate a frequency axis for the waterfall plot.
+        """
+        return np.linspace(self.min_freq, self.max_freq, self.waterfall_nsubs, endpoint=False)
