@@ -130,6 +130,10 @@ class spd:
         self.sweep_duration = float(ll[22])
         self.sweep_start_time = float(ll[23])
 
+        # Get variance from the half of the waterfall plot that definitely should not contain the pulse
+        # (which is 1/4 of the way into the plot)
+        self.varprof = np.var(self.data_zerodm_dedisp.sum(axis=0)[(self.waterfall_nbins/2):])
+
     def waterfall_time_axis(self, use_timeseries_time=False):
         """
         Generate a time axis for the waterfall plot in seconds, either beginning
