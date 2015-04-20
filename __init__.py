@@ -124,6 +124,7 @@ class spd:
         self.waterfall_nbins = int(ll[7])
         self.waterfall_nsubs = int(ll[6])
         self.waterfall_prededisp_nbins = int(ll[19])
+        self.waterfall_downsamp = int(np.round(self.waterfall_tsamp/self.tsamp))
         self.min_freq = float(ll[20])
         self.max_freq = float(ll[21])
         self.sweep_duration = float(ll[22])
