@@ -59,6 +59,8 @@ class spd:
         The width of the boxcar filter used to optimally detect this event, in number of bins
      pulsewidth_seconds
         The width of the boxcar filter used to optimally detect this event, in seconds
+     nsamp
+        The number of original time series samples included in the (possibly downsampled) waterfall plot
      waterfall_duration
         The total duration of the dedispersed waterfall plot
      waterfall_start_time
@@ -118,10 +120,11 @@ class spd:
         self.pulse_peak_time = float(ll[16])
         self.pulsewidth_bins = int(ll[12])
         self.pulsewidth_seconds = float(ll[13])
+        self.nsamp = int(ll[7])
         self.waterfall_duration = float(ll[11])
         self.waterfall_start_time = float(ll[17])
         self.waterfall_tsamp = float(ll[18])
-        self.waterfall_nbins = int(ll[7])
+        self.waterfall_nbins = self.data_zerodm_dedisp.shape[1]
         self.waterfall_nsubs = int(ll[6])
         self.waterfall_prededisp_nbins = int(ll[19])
         self.waterfall_downsamp = int(np.round(self.waterfall_tsamp/self.tsamp))
