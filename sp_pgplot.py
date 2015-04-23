@@ -7,9 +7,7 @@
 #
 # Written by Scott M. Ransom (ransom@cfa.harvard.edu)
 #          last revision: 01 Jul 2000
-# Modified by Chitrang Patel
-#          last revision: 30 March 2015
-
+#
 # 'PGPLOT' was writtten by Tim Pearson <tjp@astro.caltech.edu>,
 # and can be found at http://astro.caltech.edu/~tjp/pgplot/
 #
@@ -173,7 +171,7 @@ def read_sp_files(i):
         Return 5 arrays (properties of all single pulses):
                 DM, sigma, time, sample, downfact."""
 
-    finput = fileinput.input(glob.glob('singlepulse/singlepulse_files/*DM%i.*.singlepulse'%i))
+    finput = fileinput.input(glob.glob('singlepulse/zerodm/singlepulse_files/*DM%i.*.singlepulse'%i))
     data = Num.loadtxt(finput,
                        dtype=Num.dtype([('dm', 'float32'),
                                         ('sigma','float32'),
@@ -196,7 +194,28 @@ def gen_arrays(dm, threshold):
     sigmass = Num.zeros((1,)).astype('float32')
     ind = []
     for i in range(ddm,(max_dm+diff_dm)):
-	data = read_sp_files(i)[0]
+	if (i >= 1826) and (i < 3266):
+	    if int(i)%2 == 1:
+		i = i+1
+	    data = read_sp_files(i)[0]
+	elif (i >= 3266) and (i < 5546):
+	    if int(i)%3 == 0:
+		i = i+2
+	    if int(i)%3 == 1:
+		i = i+1
+	    data = read_sp_files(i)[0]
+	elif i>=5546:
+	    if int(i)%5 == 2:
+		i = i+4
+	    if int(i)%5 == 3:
+		i = i+3
+	    if int(i)%5 == 4:
+		i = i+2
+	    if int(i)%5 == 0:
+		i = i+1
+	    data = read_sp_files(i)[0]
+	else:    
+	    data = read_sp_files(i)[0]
 	dms = data['dm']
 	times = data['time']
 	sigmas = data['sigma']
