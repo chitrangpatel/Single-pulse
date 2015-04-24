@@ -113,7 +113,7 @@ def main():
         nbins = options.nbins
     binratio = 50    
     if options.dm:
-    nbinsextra = np.round((options.duration + dmfac * options.dm)/rawdatafile.tsamp).astype('int')
+        nbinsextra = np.round((options.duration + dmfac * options.dm)/rawdatafile.tsamp).astype('int')
     else:
         nbinsextra = nbins    
     data = rawdatafile.get_spectra(start_bin, nbinsextra)
