@@ -183,7 +183,7 @@ def main():
                 zerodm_masked_dat = copy.deepcopy(masked_dat)
 
                 #make an array to store header information for the .npz files
-                text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, values[ii][2]])
+                text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, topo_start_time])
                 # Plotting Dedispersed waterfall plot - zerodm - OFF
                 data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
                 Data = np.array(data.data)
