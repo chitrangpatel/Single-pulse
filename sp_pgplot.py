@@ -179,9 +179,9 @@ def read_sp_files(i):
                                         ('sample','uint32'),
                                         ('downfact','uint8')]))
     return Num.atleast_2d(data)
-def gen_arrays(dm, threshold):	
+def gen_arrays(dm, threshold):    
     """
-	Extract dms, times and signal to noise from each singlepulse file as 1D arrays.
+    Extract dms, times and signal to noise from each singlepulse file as 1D arrays.
     """
     max_dm = Num.ceil(Num.max(dm)).astype('int')
     min_dm = Num.min(dm).astype('int')
@@ -194,37 +194,37 @@ def gen_arrays(dm, threshold):
     sigmass = Num.zeros((1,)).astype('float32')
     ind = []
     for i in range(ddm,(max_dm+diff_dm)):
-	    if (i >= 1826) and (i < 3266):
-	        if int(i)%2 == 1:
-		        i = i+1
-	        data = read_sp_files(i)[0]
-    	elif (i >= 3266) and (i < 5546):
-    	    if int(i)%3 == 0:
-    		    i = i+2
-    	    if int(i)%3 == 1:
-    		    i = i+1
-    	    data = read_sp_files(i)[0]
-    	elif i>=5546:
-    	    if int(i)%5 == 2:
-    		    i = i+4
-    	    if int(i)%5 == 3:
-    		    i = i+3
-    	    if int(i)%5 == 4:
-    		    i = i+2
-    	    if int(i)%5 == 0:
-    		    i = i+1
-    	    data = read_sp_files(i)[0]
-    	else:    
-    	    data = read_sp_files(i)[0]
-    	dms = data['dm']
-    	times = data['time']
-    	sigmas = data['sigma']
-    	dms = Num.concatenate((dmss, dms), axis = 0)
-    	dmss = dms
-    	times = Num.concatenate((timess, times), axis = 0)
-    	timess = times
-    	sigmas = Num.concatenate((sigmass, sigmas), axis = 0)
-    	sigmass = sigmas
+        if (i >= 1826) and (i < 3266):
+            if int(i)%2 == 1:
+                i = i+1
+            data = read_sp_files(i)[0]
+        elif (i >= 3266) and (i < 5546):
+            if int(i)%3 == 0:
+                i = i+2
+            if int(i)%3 == 1:
+                i = i+1
+            data = read_sp_files(i)[0]
+        elif i>=5546:
+            if int(i)%5 == 2:
+                i = i+4
+            if int(i)%5 == 3:
+                i = i+3
+            if int(i)%5 == 4:
+                i = i+2
+            if int(i)%5 == 0:
+                i = i+1
+            data = read_sp_files(i)[0]
+        else:    
+            data = read_sp_files(i)[0]
+        dms = data['dm']
+        times = data['time']
+        sigmas = data['sigma']
+        dms = Num.concatenate((dmss, dms), axis = 0)
+        dmss = dms
+        times = Num.concatenate((timess, times), axis = 0)
+        timess = times
+        sigmas = Num.concatenate((sigmass, sigmas), axis = 0)
+        sigmass = sigmas
     dms = Num.delete(dms, (0), axis = 0)
     times = Num.delete(times, (0), axis = 0)
     sigmas = Num.delete(sigmas, (0), axis = 0)
@@ -232,7 +232,7 @@ def gen_arrays(dm, threshold):
 
 def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed_time):
     """
-	Plot DM vs Time.
+    Plot DM vs Time.
     """
     min_dm = Num.min(dms)
     max_dm = Num.max(dms)
@@ -248,8 +248,8 @@ def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed
     cand_symbols = []
     cand_symbols_group = []
     for i in range(len(sigmas)):
-    	if sigmas[i] > 20.00:
-    	    sigmas[i] = 20.0
+        if sigmas[i] > 20.00:
+            sigmas[i] = 20.0
         cand_symbol = int((sigmas[i] - 5.0)/snr_range * 6.0 + 20.5)
         cand_symbols.append(min(cand_symbol, 26))
     cand_symbols = Num.array(cand_symbols)
