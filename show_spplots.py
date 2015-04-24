@@ -3,7 +3,7 @@
 """
 Plot single pulse plots(same as those produced by sp_pipeline.py).
 
-Input: .npz file 
+Input: .spd file.  I more than 1 spd files are given, only the first file will be selected. 
 
 latest revision: Chitrang Patel - 30 March 2015
 """
