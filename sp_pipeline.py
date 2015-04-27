@@ -199,7 +199,7 @@ def main():
                 text_array = np.append(text_array,data.numspectra)
                 text_array = np.append(text_array,data.freqs.min())
                 text_array = np.append(text_array,data.freqs.max())
-                ppgplot.pgopen(basename+'_%.2f_dm_%.2f_s_rank_%i.ps/VPS'%(subdm, values[ii][2], rank))
+                ppgplot.pgopen(basename+'_DM%.1f_%.1fs_rank_%i.ps/VPS'%(subdm, values[ii][2], rank))
                 ppgplot.pgpap(10.25, 8.5/11.0)
 
                 ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
@@ -391,11 +391,11 @@ def main():
                 sigma_range = sigmas
                 sigmas = sigma_range
                 dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
-                with open(basename+"_%.2f_dm_%.2f_s_rank_%i.spd" %(subdm, values[ii][2], rank), 'wb') as f:
+                with open(basename+"_DM%.1f_%.1fs_rank_%i.spd" %(subdm, values[ii][2], rank), 'wb') as f:
                     np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_range= map(np.float16,dm_range), time_range= map(np.float16, time_range), sigma_range= map(np.float16, sigma_range), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array)
                 ppgplot.pgiden()
                 ppgplot.pgclos()
-                Popen(["convert", "-flatten", basename+"_%.2f_dm_%.2f_s_rank_%i.ps"%(subdm, values[ii][2], rank), basename+"_%.2f_dm_%.2f_s_rank_%i.png"%(subdm, values[ii][2], rank)], stdout=PIPE, stderr=PIPE)
+                Popen(["convert", "-flatten", basename+"_DM%.1f_%.1fs_rank_%i.ps"%(subdm, values[ii][2], rank), basename+"_DM%.1f_%.1fs_rank_%i.png"%(subdm, values[ii][2], rank)], stdout=PIPE, stderr=PIPE)
                 print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
         print_debug("Finished group %i... "%rank+strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Finished running waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
