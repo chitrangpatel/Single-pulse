@@ -52,10 +52,10 @@ max_freq = float(text_array[21])
 sweep_duration = float(text_array[22])
 sweeped_start = float(text_array[23])
 
-
+basenm = fn[:-4]
 # Dedispersed waterfall plot - zerodm - OFF
 array = npzfile['Data_dedisp_nozerodm'].astype(np.float64)
-ppgplot.pgopen('%.2f_dm_%.2f_s_rank_%i_group.npz.ps/VPS'%(subdm, (start+0.25*duration), rank))
+ppgplot.pgopen(basenm+'DM%.1f_%.2fs_rank_%i_group.npz.ps/VPS'%(subdm, (start+0.25*duration), rank))
 ppgplot.pgpap(10.25, 8.5/11.0)
 
 ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
