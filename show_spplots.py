@@ -1,17 +1,8 @@
 #! /usr/bin/env python
 
-"""
-Plot single pulse plots(same as those produced by sp_pipeline.py).
-
-Input: .spd file.  I more than 1 spd files are given, only the first file will be selected. 
-
-latest revision: Chitrang Patel - 30 March 2015
-"""
-
 import glob
 import sys
 import numpy as np
-import waterfaller
 
 from sp_pgplot import *
 from subprocess import Popen, PIPE
@@ -52,10 +43,11 @@ max_freq = float(text_array[21])
 sweep_duration = float(text_array[22])
 sweeped_start = float(text_array[23])
 
-basenm = fn[:-5]
+
 # Dedispersed waterfall plot - zerodm - OFF
 array = npzfile['Data_dedisp_nozerodm'].astype(np.float64)
-ppgplot.pgopen(basenm+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+print array.shape
+ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
 ppgplot.pgpap(10.25, 8.5/11.0)
 
 ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
@@ -181,12 +173,11 @@ ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Signal-to-noise")
 ppgplot.pgpt(dm_arr, sigma_arr, 20)
 
 # DM vs Time
-dm_range = map(np.float32, npzfile['dm_range'])
-time_range = map(np.float32, npzfile['time_range'])
-sigma_range = map(np.float32, npzfile['sigma_range'])
+threshold = 5.5
+dms, times, sigmas = gen_arrays(dm_arr, threshold)
 dm_list = map(np.float32, npzfile['dm_list'])
 time_list = map(np.float32, npzfile['time_list'])
-dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
+dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time)
 
 ppgplot.pgiden()
 ppgplot.pgclos()
