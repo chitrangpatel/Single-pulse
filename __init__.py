@@ -83,10 +83,6 @@ class SPcand:
         self.data_nozerodm = dd['Data_nozerodm']
         self.data_nozerodm_dedisp = dd['Data_dedisp_nozerodm']
          
-        self.dmVt_dms = dd['dm_range']
-        self.dmVt_times = dd['time_range']
-        self.dmVt_sigmas = dd['sigma_range']
-
         self.dmVt_this_dms = dd['dm_arr']
         self.dmVt_this_times = np.array(dd['time_list'])
         self.dmVt_this_sigmas = dd['sigma_arr']
