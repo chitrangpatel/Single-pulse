@@ -15,13 +15,6 @@ class spd:
      data_nozerodm_dedisp
         A 2D freq-vs-time array around the pulse, dedispersed (non-zero-DM'd data)
 
-     dmVt_dms
-        DM values for the DM-vs-time scatterplot
-     dmVt_times
-        Time values for the DM-vs-time scatterplot
-     dmVt_sigmas
-        Sigma values (determining point size) for the DM-vs-time scatterplot
-
      dmsweep_delays
         Delays corresponding to frequencies for drawn-in dispersion sweep
      dmsweep_freqs
