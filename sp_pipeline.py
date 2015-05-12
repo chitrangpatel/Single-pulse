@@ -408,7 +408,7 @@ if __name__=='__main__':
 				    "DM vs time, and SNR vs DM,"\
                                     "in psrFits data.")
     parser.add_option('--infile', dest='infile', type='string', \
-                        help="Give a .inf file to read the appropriate header information.")
+                        help="Give any .inf file to read in the basic header information.")
     parser.add_option('--groupsfile', dest='txtfile', type='string', \
                         help="Give the groups.txt file to read in the groups information.") 
     parser.add_option('--mask', dest='maskfile', type='string', \
