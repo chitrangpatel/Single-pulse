@@ -194,48 +194,49 @@ def gen_arrays(dm, threshold, sp_files):
     ind = []
     dm_time_files = []
     for i in range(ddm,(max_dm+diff_dm)):
+    """after DM of 1826, the dm step size is >= 1, therefore we need to pick the correct DMs."""
 	if (i >= 1826) and (i < 3266):
 	    if int(i)%2 == 1:
-		i = i+1
-            try:
-	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
-		dm_time_files += singlepulsefiles
+		    i = i+1
+        try:
+	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]] # Pick the correct singlepulse filenames from the list of .singlepulsefiles
+		    dm_time_files += singlepulsefiles
 	        data = read_sp_files(singlepulsefiles)[0]
-            except:
-		pass
+        except:
+		    pass
 	elif (i >= 3266) and (i < 5546):
 	    if int(i)%3 == 0:
-		i = i+2
+		    i = i+2
 	    if int(i)%3 == 1:
-		i = i+1
+		    i = i+1
 	    try:
 	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
-		dm_time_files += singlepulsefiles
+		    dm_time_files += singlepulsefiles
 	        data = read_sp_files(singlepulsefiles)[0]
  	    except:
-		pass
+		    pass
 	elif i>=5546:
 	    if int(i)%5 == 2:
-		i = i+4
+		    i = i+4
 	    if int(i)%5 == 3:
-		i = i+3
+		    i = i+3
 	    if int(i)%5 == 4:
-		i = i+2
+		    i = i+2
 	    if int(i)%5 == 0:
-		i = i+1
+		    i = i+1
 	    try:
 	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
-		dm_time_files += singlepulsefiles
+		    dm_time_files += singlepulsefiles
 	        data = read_sp_files(singlepulsefiles)[0]
 	    except:
-		pass
+		    pass
 	else:    
 	    try:
 	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
-		dm_time_files += singlepulsefiles
+		    dm_time_files += singlepulsefiles
 	        data = read_sp_files(singlepulsefiles)[0]
 	    except:
-		pass
+		    pass
 	dms = data['dm']
 	times = data['time']
 	sigmas = data['sigma']
