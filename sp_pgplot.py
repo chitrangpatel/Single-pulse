@@ -166,12 +166,11 @@ def plot_waterfall(z, x=None, y=None, title=None, rangex=None, rangey=None, \
         ppgplot.pggray_s(z, 0.0, 0.0, rangex[0], rangey[0], \
                          rangex[1], rangey[1])  
 
-def read_sp_files(i):
+def read_sp_files(files):
     """Read all *.singlepulse files in the current directory in a DM range.
         Return 5 arrays (properties of all single pulses):
                 DM, sigma, time, sample, downfact."""
-    
-    finput = fileinput.input(glob.glob('singlepulse/singlepulse_files/*DM%i.*.singlepulse'%i))
+    finput = fileinput.input(files)
     data = Num.loadtxt(finput,
                        dtype=Num.dtype([('dm', 'float32'),
                                         ('sigma','float32'),
@@ -179,7 +178,7 @@ def read_sp_files(i):
                                         ('sample','uint32'),
                                         ('downfact','uint8')]))
     return Num.atleast_2d(data)
-def gen_arrays(dm, threshold):	
+def gen_arrays(dm, threshold, sp_files):	
     """
 	Extract dms, times and signal to noise from each singlepulse file as 1D arrays.
     """
@@ -193,17 +192,28 @@ def gen_arrays(dm, threshold):
     timess = Num.zeros((1,)).astype('float32')
     sigmass = Num.zeros((1,)).astype('float32')
     ind = []
+    dm_time_files = []
     for i in range(ddm,(max_dm+diff_dm)):
 	if (i >= 1826) and (i < 3266):
 	    if int(i)%2 == 1:
 		i = i+1
-	    data = read_sp_files(i)[0]
+            try:
+	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
+		dm_time_files += singlepulsefiles
+	        data = read_sp_files(singlepulsefiles)[0]
+            except:
+		pass
 	elif (i >= 3266) and (i < 5546):
 	    if int(i)%3 == 0:
 		i = i+2
 	    if int(i)%3 == 1:
 		i = i+1
-	    data = read_sp_files(i)[0]
+	    try:
+	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
+		dm_time_files += singlepulsefiles
+	        data = read_sp_files(singlepulsefiles)[0]
+ 	    except:
+		pass
 	elif i>=5546:
 	    if int(i)%5 == 2:
 		i = i+4
@@ -213,9 +223,19 @@ def gen_arrays(dm, threshold):
 		i = i+2
 	    if int(i)%5 == 0:
 		i = i+1
-	    data = read_sp_files(i)[0]
+	    try:
+	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
+		dm_time_files += singlepulsefiles
+	        data = read_sp_files(singlepulsefiles)[0]
+	    except:
+		pass
 	else:    
-	    data = read_sp_files(i)[0]
+	    try:
+	        singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
+		dm_time_files += singlepulsefiles
+	        data = read_sp_files(singlepulsefiles)[0]
+	    except:
+		pass
 	dms = data['dm']
 	times = data['time']
 	sigmas = data['sigma']
@@ -228,7 +248,7 @@ def gen_arrays(dm, threshold):
     dms = Num.delete(dms, (0), axis = 0)
     times = Num.delete(times, (0), axis = 0)
     sigmas = Num.delete(sigmas, (0), axis = 0)
-    return dms, times, sigmas
+    return dms, times, sigmas, dm_time_files
 
 def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed_time):
     """

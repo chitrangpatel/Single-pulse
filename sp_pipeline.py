@@ -113,6 +113,8 @@ def main():
     print_debug("Begining waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
     Detrendlen = 50
     fn = args[0]
+    if not fn.endswith("fits"):
+        raise ValueError("The first file must be a psrFits file! ") 
     basename = fn[:-5]
     filetype = "psrfits"
     inffile = options.infile
@@ -376,8 +378,10 @@ def main():
 		    threshold = 6.00
 		else:
 		    threshold = 5.50
+		sp_files = args[1:]
+		print len(sp_files)
                 if (np.abs(subdm - DM) > 15):
-                    dms, time, sigmas = sp_pgplot.gen_arrays(dm_arr, threshold)
+                    dms, time, sigmas, singlepulse_files = sp_pgplot.gen_arrays(dm_arr, threshold, sp_files)
             	    DM = subdm
                 dm_range = dms
                 dms = dm_range
@@ -387,7 +391,7 @@ def main():
                 sigmas = sigma_range
                 sp_pgplot.dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
 		with open(temp_filename+".spd", 'wb') as f:
-		    np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array)
+		    np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array, singlepulse_files = singlepulse_files)
                 sp_pgplot.ppgplot.pgiden()
                 sp_pgplot.ppgplot.pgclos()
           	print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
@@ -398,7 +402,7 @@ def main():
 if __name__=='__main__':
     parser = optparse.OptionParser(prog="sp_pipeline..py", \
                         version=" Chitrang Patel (May. 12, 2015)", \
-                        usage="%prog INFILE", \
+                        usage="%prog INFILE(PsrFits FILE, SINGLEPULSE FILES)", \
                         description="Create single pulse plots to show the " \
                                     "frequency sweeps of a single pulse,  " \
 				    "DM vs time, and SNR vs DM,"\
