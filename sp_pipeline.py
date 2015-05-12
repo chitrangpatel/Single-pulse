@@ -11,15 +11,14 @@ Patrick Lazarus - Aug. 19, 2011
 
 import sys
 import copy
-import glob
 from time import strftime
 import infodata
 from subprocess import Popen, PIPE
 
 import numpy as np
-
-from waterfaller import *
-from sp_pgplot import *
+import optparse
+import waterfaller
+import sp_pgplot 
 import bary_and_topo
 import psr_utils
 import rfifind
@@ -36,7 +35,7 @@ def get_textfile():
     """ Read in the groups.txt file.
 	Contains information about the DM, time, box car width, signal to noise, sample number and rank	       of groups. 
     """
-    return  np.loadtxt(glob.glob('groups*')[0],dtype='str',delimiter='\n')
+    return  np.loadtxt(options.txtfile,dtype = 'str',delimiter='\n')
 #Get The parameters  
 def group_info(rank):
     """
@@ -98,15 +97,13 @@ def maskdata(data, start_bin, nbinsextra):
 	    data: 2D array after masking. 
     """
     print 'reading maskfile'
-    maskfile = glob.glob('*.mask')[0]
-    #maskfile = None
+    maskfile = options.maskfile
     if maskfile is not None:
 	print 'running rfifind'
         rfimask = rfifind.rfifind(maskfile)
-        mask = get_mask(rfimask, start_bin, nbinsextra)
+        mask = waterfaller.get_mask(rfimask, start_bin, nbinsextra)
    	# Mask data
    	data = data.masked(mask, maskval='median-mid80')
-	#datacopy = copy.deepcopy(data)
 	print data.data.shape
 	print 'masked'
     return data
@@ -115,26 +112,22 @@ def main():
     file = get_textfile()
     print_debug("Begining waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
     Detrendlen = 50
-    fn = glob.glob('p2030*.fits')[0]
+    fn = args[0]
     basename = fn[:-5]
     filetype = "psrfits"
-    inffiles = glob.glob('*.inf')
-    if len(inffiles) == 0: # no inf files exist
-        print "No inf files available!"
-    else:
-        inffile = inffiles[0] # take the first inf file in current dir
-	topo, bary = bary_and_topo.bary_to_topo(inffile)
-	time_shift = bary-topo
-        inf = infodata.infodata(inffile)
-        RA = inf.RA
-        dec = inf.DEC
-        MJD = inf.epoch
-        mjd = Popen(["mjd2cal", "%f"%MJD], stdout=PIPE, stderr=PIPE)
-        date, err = mjd.communicate()
-        date = date.split()[2:5]
-        telescope = inf.telescope
-	N = inf.N
-        Total_observed_time = inf.dt *N
+    inffile = options.infile
+    topo, bary = bary_and_topo.bary_to_topo(inffile)
+    time_shift = bary-topo
+    inf = infodata.infodata(inffile)
+    RA = inf.RA
+    dec = inf.DEC
+    MJD = inf.epoch
+    mjd = Popen(["mjd2cal", "%f"%MJD], stdout=PIPE, stderr=PIPE)
+    date, err = mjd.communicate()
+    date = date.split()[2:5]
+    telescope = inf.telescope
+    N = inf.N
+    Total_observed_time = inf.dt *N
     print 'getting file'
     rawdatafile = psrfits.PsrfitsFile(fn)
     bin_shift = np.round(time_shift/rawdatafile.tsamp).astype('int')
@@ -186,7 +179,7 @@ def main():
 		temp_filename = basename+"_DM%.1f_%.1fs_rank_%i"%(subdm, topo_start_time, rank)
 		text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, topo_start_time])
                 # Plotting Dedispersed waterfall plot - zerodm - OFF
-                data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
 		Data = np.array(data.data)
                 ragfac = float(nbins)/bins
                 dmrange, trange = Data.shape
@@ -200,42 +193,42 @@ def main():
 		text_array = np.append(text_array,data.numspectra)
 		text_array = np.append(text_array,data.freqs.min())
 		text_array = np.append(text_array,data.freqs.max())
-                ppgplot.pgopen(temp_filename+'.ps/VPS')
-                ppgplot.pgpap(10.25, 8.5/11.0)
+                sp_pgplot.ppgplot.pgopen(temp_filename+'.ps/VPS')
+                sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
 
-                ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
-                ppgplot.pgswin(data.starttime - start, data.starttime-start+nbinlim*data.dt, data.freqs.min(), data.freqs.max())
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(3)
-        	ppgplot.pgbox("BCST", 0, 0, "BCNST", 0, 0)
-                ppgplot.pgslw(3)
-                ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
-                ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - Off")
-                plot_waterfall(array,rangex = [data.starttime-start, data.starttime-start+nbinlim*data.dt], rangey = [data.freqs.min(), data.freqs.max()], image = 'apjgrey')
+                sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
+                sp_pgplot.ppgplot.pgswin(data.starttime - start, data.starttime-start+nbinlim*data.dt, data.freqs.min(), data.freqs.max())
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCNST", 0, 0)
+                sp_pgplot.ppgplot.pgslw(3)
+                sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
+                sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - Off")
+                sp_pgplot.plot_waterfall(array,rangex = [data.starttime-start, data.starttime-start+nbinlim*data.dt], rangey = [data.freqs.min(), data.freqs.max()], image = 'apjgrey')
 
        	    #### Plot Dedispersed Time series - Zerodm filter - Off
                 integrate_dm = subdm
                 Dedisp_ts = Data.sum(axis=0)
                 times = (np.arange(data.numspectra)*data.dt+data.starttime-start)[..., :nbinlim]
-                ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
-                ppgplot.pgswin(data.starttime - start, data.starttime-start+ nbinlim*data.dt, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(3)
-        	ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
-                ppgplot.pgsci(1)
-                ppgplot.pgline(times,Dedisp_ts)
-		ppgplot.pgslw(3)
-		ppgplot.pgsci(1)
+                sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
+                sp_pgplot.ppgplot.pgswin(data.starttime - start, data.starttime-start+ nbinlim*data.dt, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
+                sp_pgplot.ppgplot.pgsci(1)
+                sp_pgplot.ppgplot.pgline(times,Dedisp_ts)
+		sp_pgplot.ppgplot.pgslw(3)
+		sp_pgplot.ppgplot.pgsci(1)
                 errx1 = np.array([0.60 * (data.starttime-start+nbinlim*data.dt)])
                 erry1 = np.array([0.60 * np.max(Dedisp_ts)])
                 erry2 = np.array([np.std(Dedisp_ts)])
                 errx2 = np.array([pulse_width])
-                ppgplot.pgerrb(5, errx1, erry1, errx2, 1.0)
-                ppgplot.pgpt(errx1, erry1, -1)
+                sp_pgplot.ppgplot.pgerrb(5, errx1, erry1, errx2, 1.0)
+                sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
 
                 #### Dedispersed with zerodm
                 zerodm = True
-                data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, zerodm_masked_dat)
+                data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, zerodm_masked_dat)
 		Data = np.array(data.data)
                 ragfac = float(nbins)/bins
                 dmrange, trange = Data.shape
@@ -243,50 +236,50 @@ def main():
                 array = Data[..., :nbinlim]
                 array = array[::-1]
 		Data_dedisp_zerodm = array
-                ppgplot.pgsvp(0.07, 0.40, 0.1, 0.40)
-                ppgplot.pgswin(data.starttime-start , data.starttime-start+ nbinlim*data.dt, data.freqs.min(), data.freqs.max())
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(3)
-        	ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
-        	ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time - %.2f s"%data.starttime)
-                ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
-                ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - On")
-                plot_waterfall(array,rangex = [data.starttime-start, data.starttime-start+ nbinlim*data.dt],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
+                sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.1, 0.40)
+                sp_pgplot.ppgplot.pgswin(data.starttime-start , data.starttime-start+ nbinlim*data.dt, data.freqs.min(), data.freqs.max())
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
+        	sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time - %.2f s"%data.starttime)
+                sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
+                sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - On")
+                sp_pgplot.plot_waterfall(array,rangex = [data.starttime-start, data.starttime-start+ nbinlim*data.dt],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
        	        #### Plot Dedispersed Time series - Zerodm filter - On
                 times = (np.arange(data.numspectra)*data.dt+data.starttime-start)[..., :nbinlim]
                 dedisp_ts = Data.sum(axis=0)
-                ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
-                ppgplot.pgswin(data.starttime - start, data.starttime-start+ nbinlim*data.dt, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(3)
-        	ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
-                ppgplot.pgsci(1)
-                ppgplot.pgline(times,dedisp_ts)
+                sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
+                sp_pgplot.ppgplot.pgswin(data.starttime - start, data.starttime-start+ nbinlim*data.dt, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
+                sp_pgplot.ppgplot.pgsci(1)
+                sp_pgplot.ppgplot.pgline(times,dedisp_ts)
                 errx1 = np.array([0.60 * (data.starttime-start+nbinlim*data.dt)])
                 erry1 = np.array([0.60 * np.max(dedisp_ts)])
                 erry2 = np.array([np.std(dedisp_ts)])
                 errx2 = np.array([pulse_width])
-                ppgplot.pgerrb(5, errx1, erry1, errx2, 1.0)
-                ppgplot.pgpt(errx1, erry1, -1)
+                sp_pgplot.ppgplot.pgerrb(5, errx1, erry1, errx2, 1.0)
+                sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
                 integrate_dm = None
 
                 #### Figure texts 
-                ppgplot.pgsvp(0.745, 0.97, 0.64, 0.909)
-                ppgplot.pgsch(0.85)
-                ppgplot.pgslw(3)
-                ppgplot.pgmtxt('T', -1.1, 0.01, 0.0, "RA: %s" %RA)
-                ppgplot.pgmtxt('T', -2.6, 0.01, 0.0, "DEC: %s" %dec)
-                ppgplot.pgmtxt('T', -4.1, 0.01, 0.0, "MJD: %f" %MJD)
-                ppgplot.pgmtxt('T', -5.6, 0.01, 0.0, "Observation date: %s %s %s" %(date[0], date[1], date[2]))
-                ppgplot.pgmtxt('T', -7.1, 0.01, 0.0, "Telescope: %s" %telescope)
-                ppgplot.pgmtxt('T', -8.6, 0.01, 0.0, "DM: %.2f pc cm\u-3\d" %dm)
-                ppgplot.pgmtxt('T', -10.1, 0.01, 0.0, "S/N\dMAX\u: %.2f" %sigma)
-                ppgplot.pgmtxt('T', -11.6, 0.01, 0.0, "Number of samples: %i" %nbins)
-                ppgplot.pgmtxt('T', -13.1, 0.01, 0.0, "Number of subbands: %i" %nsub)
-                ppgplot.pgmtxt('T', -14.6, 0.01, 0.0, "Pulse width: %.2f ms" %(pulse_width*1e3))
-                ppgplot.pgmtxt('T', -16.1, 0.01, 0.0, "Sampling time: %.2f \gms" %(rawdatafile.tsamp*1e6))
-                ppgplot.pgsvp(0.07, 0.7, 0.01, 0.05)
-                ppgplot.pgmtxt('T', -2.1, 0.01, 0.0, "%s"%fn)
+                sp_pgplot.ppgplot.pgsvp(0.745, 0.97, 0.64, 0.909)
+                sp_pgplot.ppgplot.pgsch(0.85)
+                sp_pgplot.ppgplot.pgslw(3)
+                sp_pgplot.ppgplot.pgmtxt('T', -1.1, 0.01, 0.0, "RA: %s" %RA)
+                sp_pgplot.ppgplot.pgmtxt('T', -2.6, 0.01, 0.0, "DEC: %s" %dec)
+                sp_pgplot.ppgplot.pgmtxt('T', -4.1, 0.01, 0.0, "MJD: %f" %MJD)
+                sp_pgplot.ppgplot.pgmtxt('T', -5.6, 0.01, 0.0, "Observation date: %s %s %s" %(date[0], date[1], date[2]))
+                sp_pgplot.ppgplot.pgmtxt('T', -7.1, 0.01, 0.0, "Telescope: %s" %telescope)
+                sp_pgplot.ppgplot.pgmtxt('T', -8.6, 0.01, 0.0, "DM: %.2f pc cm\u-3\d" %dm)
+                sp_pgplot.ppgplot.pgmtxt('T', -10.1, 0.01, 0.0, "S/N\dMAX\u: %.2f" %sigma)
+                sp_pgplot.ppgplot.pgmtxt('T', -11.6, 0.01, 0.0, "Number of samples: %i" %nbins)
+                sp_pgplot.ppgplot.pgmtxt('T', -13.1, 0.01, 0.0, "Number of subbands: %i" %nsub)
+                sp_pgplot.ppgplot.pgmtxt('T', -14.6, 0.01, 0.0, "Pulse width: %.2f ms" %(pulse_width*1e3))
+                sp_pgplot.ppgplot.pgmtxt('T', -16.1, 0.01, 0.0, "Sampling time: %.2f \gms" %(rawdatafile.tsamp*1e6))
+                sp_pgplot.ppgplot.pgsvp(0.07, 0.7, 0.01, 0.05)
+                sp_pgplot.ppgplot.pgmtxt('T', -2.1, 0.01, 0.0, "%s"%fn)
 
                 ####Sweeped without zerodm
 		start = start + (0.25*duration)
@@ -300,58 +293,58 @@ def main():
                 zerodm = None
                 dm = None
 		zerodm_masked_dat = copy.copy(masked_dat)
-                data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
 		text_array = np.append(text_array, sweep_duration)
 		text_array = np.append(text_array, data.starttime)
 		Data = np.array(data.data)[..., :nbins]
                 array = Data
                 array = array[::-1]
 		Data_nozerodm = array
-                ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
-                ppgplot.pgswin(data.starttime, data.starttime+sweep_duration, data.freqs.min(), data.freqs.max())
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(4)
-        	ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-                ppgplot.pgsch(3)
+                sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
+                sp_pgplot.ppgplot.pgswin(data.starttime, data.starttime+sweep_duration, data.freqs.min(), data.freqs.max())
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(4)
+        	sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+                sp_pgplot.ppgplot.pgsch(3)
                 # Construct the image
-                plot_waterfall(array,rangex = [data.starttime, data.starttime+sweep_duration],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
+                sp_pgplot.plot_waterfall(array,rangex = [data.starttime, data.starttime+sweep_duration],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
                 if sweep_dm is not None:
                     ddm = sweep_dm-data.dm
             	    delays = psr_utils.delay_from_DM(ddm, data.freqs)
             	    delays -= delays.min()
 		    delays_nozerodm = delays
 		    freqs_nozerodm = data.freqs
-           	    ppgplot.pgslw(5)
+           	    sp_pgplot.ppgplot.pgslw(5)
             	    sweepstart = data.starttime- 0.3*sweep_duration
-            	    ppgplot.pgsci(0)
-            	    ppgplot.pgline(delays+sweepstart, data.freqs)
-            	    ppgplot.pgsci(1)
-            	    ppgplot.pgslw(3)
+            	    sp_pgplot.ppgplot.pgsci(0)
+            	    sp_pgplot.ppgplot.pgline(delays+sweepstart, data.freqs)
+            	    sp_pgplot.ppgplot.pgsci(1)
+            	    sp_pgplot.ppgplot.pgslw(3)
                 # Sweeped with zerodm-on 
                 zerodm = True
 		downsamp_temp = 1
-                data, bins = waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp_temp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp_temp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
 		Data = np.array(data.data)[..., :nbins]
                 array = Data
                 array = array[::-1]
 		Data_zerodm = array
-                ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
-                ppgplot.pgswin(data.starttime, data.starttime+sweep_duration, data.freqs.min(), data.freqs.max())
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(4)
-        	ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-                ppgplot.pgslw(3)
-                plot_waterfall(array,rangex = [data.starttime, data.starttime+sweep_duration],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
+                sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
+                sp_pgplot.ppgplot.pgswin(data.starttime, data.starttime+sweep_duration, data.freqs.min(), data.freqs.max())
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(4)
+        	sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+                sp_pgplot.ppgplot.pgslw(3)
+                sp_pgplot.plot_waterfall(array,rangex = [data.starttime, data.starttime+sweep_duration],rangey = [data.freqs.min(), data.freqs.max()],image = 'apjgrey')
                 if sweep_dm is not None:
                     ddm = sweep_dm-data.dm
             	    delays = psr_utils.delay_from_DM(ddm, data.freqs)
             	    delays -= delays.min()
-            	    ppgplot.pgslw(5)
+            	    sp_pgplot.ppgplot.pgslw(5)
             	    sweepstart = data.starttime-0.3*sweep_duration
-            	    ppgplot.pgsci(0)
-            	    ppgplot.pgline(delays+sweepstart, data.freqs)
-            	    ppgplot.pgsci(1)
-            	    ppgplot.pgslw(3)
+            	    sp_pgplot.ppgplot.pgsci(0)
+            	    sp_pgplot.ppgplot.pgline(delays+sweepstart, data.freqs)
+            	    sp_pgplot.ppgplot.pgsci(1)
+            	    sp_pgplot.ppgplot.pgslw(3)
                 #### Plotting DM vs SNR
                 temp_line = file[lis[ii]-6]
                 temp_list = temp_line.split()
@@ -369,23 +362,22 @@ def main():
                 dm_arr = np.array([arr_2[i][0] for i in range(len(arr))], dtype = np.float32)
                 sigma_arr = np.array([arr_2[i][1] for i in range(len(arr))], dtype = np.float32)
                 time_arr = np.array([arr_2[i][2] for i in range(len(arr))], dtype = np.float32)
-                ppgplot.pgsvp(0.48, 0.73, 0.65, 0.90)
-                ppgplot.pgswin(np.min(dm_arr), np.max(dm_arr), 0.95*np.min(sigma_arr), 1.05*np.max(sigma_arr))
-                ppgplot.pgsch(0.8)
-                ppgplot.pgslw(3)
-        	ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
-                ppgplot.pgslw(3)
-        	ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "DM (pc cm\u-3\d)")
-                ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Signal-to-noise")
-                ppgplot.pgpt(dm_arr, sigma_arr, 20)
-		print len(dm_list), len(dm_arr)
+                sp_pgplot.ppgplot.pgsvp(0.48, 0.73, 0.65, 0.90)
+                sp_pgplot.ppgplot.pgswin(np.min(dm_arr), np.max(dm_arr), 0.95*np.min(sigma_arr), 1.05*np.max(sigma_arr))
+                sp_pgplot.ppgplot.pgsch(0.8)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
+                sp_pgplot.ppgplot.pgslw(3)
+        	sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "DM (pc cm\u-3\d)")
+                sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Signal-to-noise")
+                sp_pgplot.ppgplot.pgpt(dm_arr, sigma_arr, 20)
                 #### Plotting DM vs Time
 		if subdm <10.00:
 		    threshold = 6.00
 		else:
 		    threshold = 5.50
                 if (np.abs(subdm - DM) > 15):
-                    dms, time, sigmas = gen_arrays(dm_arr, threshold)
+                    dms, time, sigmas = sp_pgplot.gen_arrays(dm_arr, threshold)
             	    DM = subdm
                 dm_range = dms
                 dms = dm_range
@@ -393,18 +385,34 @@ def main():
                 times = time_range
                 sigma_range = sigmas
                 sigmas = sigma_range
-                dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
-		#with open(temp_filename+".spd", 'wb') as f:
-		#    np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_range= map(np.float16,dm_range), time_range= map(np.float16, time_range), sigma_range= map(np.float16, sigma_range), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array)
+                sp_pgplot.dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
 		with open(temp_filename+".spd", 'wb') as f:
 		    np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array)
-                ppgplot.pgiden()
-                ppgplot.pgclos()
-                Popen(["convert", "-flatten", temp_filename+".ps", temp_filename+".png"], stdout=PIPE, stderr=PIPE)
+                sp_pgplot.ppgplot.pgiden()
+                sp_pgplot.ppgplot.pgclos()
           	print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
 	print_debug("Finished group %i... "%rank+strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Finished running waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
 
 
 if __name__=='__main__':
+    parser = optparse.OptionParser(prog="sp_pipeline..py", \
+                        version=" Chitrang Patel (May. 12, 2015)", \
+                        usage="%prog INFILE", \
+                        description="Create single pulse plots to show the " \
+                                    "frequency sweeps of a single pulse,  " \
+				    "DM vs time, and SNR vs DM,"\
+                                    "in psrFits data.")
+    parser.add_option('--infile', dest='infile', type='string', \
+                        help="Give a .inf file to read the appropriate header information.")
+    parser.add_option('--groupsfile', dest='txtfile', type='string', \
+                        help="Give the groups.txt file to read in the groups information.") 
+    parser.add_option('--mask', dest='maskfile', type='string', \
+                        help="Mask file produced by rfifind. (Default: No Mask).", \
+                        default=None)
+    options, args = parser.parse_args()
+    if not hasattr(options, 'infile'):
+        raise ValueError("A .inf file must be given on the command line! ") 
+    if not hasattr(options, 'txtfile'):
+        raise ValueError("The groups.txt file must be given on the command line! ") 
     main()

@@ -105,7 +105,7 @@ def main():
 
     # Read data
     start_bin = np.round(options.start/rawdatafile.tsamp).astype('int')
-    #dmfac = 4.15e3 * np.abs(1./rawdatafile.fch1**2 - 1./(rawdatafile.frequencies[-1])**2)
+	#dmfac = 4.15e3 * np.abs(1./rawdatafile.fch1**2 - 1./(rawdatafile.frequencies[-1])**2)
     dmfac = 4.15e3 * np.abs(1./rawdatafile.frequencies[0]**2 - 1./rawdatafile.frequencies[-1]**2)
     if options.nbins is None:
         nbins = np.round(options.duration/rawdatafile.tsamp).astype('int')
@@ -113,7 +113,7 @@ def main():
         nbins = options.nbins
     binratio = 50    
     if options.dm:
-        nbinsextra = np.round((options.duration + dmfac * options.dm)/rawdatafile.tsamp).astype('int')
+	nbinsextra = np.round((options.duration + dmfac * options.dm)/rawdatafile.tsamp).astype('int')
     else:
         nbinsextra = nbins    
     data = rawdatafile.get_spectra(start_bin, nbinsextra)
@@ -165,8 +165,8 @@ def main():
         times = (np.arange(data.numspectra)*data.dt + options.start)[..., :nbinlim]
         ax = plt.axes((0.15, 0.75, 0.8, 0.2))
         plt.plot(times, Dedisp_ts)
-    plt.setp(ax.get_xticklabels(), visible = False)
-    plt.setp(ax.get_yticklabels(), visible = False)
+	plt.setp(ax.get_xticklabels(), visible = False)
+	plt.setp(ax.get_yticklabels(), visible = False)
     fig.canvas.mpl_connect('key_press_event', \
             lambda ev: (ev.key in ('q','Q') and plt.close(fig)))
     plt.show()
