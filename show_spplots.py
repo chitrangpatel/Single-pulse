@@ -193,7 +193,7 @@ def main():
     
 if __name__ == '__main__':
     parser = optparse.OptionParser(prog="waterfaller.py", \
-				   usage = "%prog [OPTIONS] INFILES (.spd file, .singlepulse files)")
+				   usage = "%prog [OPTIONS] INFILE (.spd file)")
     parser.add_option("-x", "--xwin", action="store_true", dest="xwin",
                       default=False, help="Don't make a postscript plot, just use an X-window")
     (options, args) = parser.parse_args()
