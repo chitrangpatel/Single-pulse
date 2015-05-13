@@ -16,7 +16,14 @@ class spd:
         A 2D freq-vs-time array around the pulse, dedispersed (non-zero-DM'd data)
      
      spfiles
-        single pulse files for the DM-vs-time scatterplot.
+        PRESTO single pulse files for the DM-vs-time scatterplot
+     dmVt_this_dms
+        DM values for this pulse in the DM-vs-time scatterplot
+     dmVt_this_times
+        Time values for this pulse in the DM-vs-time scatterplot
+     dmVt_this_sigmas
+        Sigma values (determining point size) for this pulse in the DM-vs-time scatterplot
+
 
      dmsweep_delays
         Delays corresponding to frequencies for drawn-in dispersion sweep
