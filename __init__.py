@@ -14,6 +14,9 @@ class spd:
         A 2D freq-vs-time array around the pulse, not dedispersed (non-zero-DM'd data)
      data_nozerodm_dedisp
         A 2D freq-vs-time array around the pulse, dedispersed (non-zero-DM'd data)
+     
+     spfiles
+        single pulse files for the DM-vs-time scatterplot.
 
      dmsweep_delays
         Delays corresponding to frequencies for drawn-in dispersion sweep
@@ -82,6 +85,7 @@ class spd:
         self.data_nozerodm = dd['Data_nozerodm']
         self.data_nozerodm_dedisp = dd['Data_dedisp_nozerodm']
          
+        self.spfiles = dd['singlepulse_files']
         self.dmVt_this_dms = dd['dm_arr']
         self.dmVt_this_times = np.array(dd['time_list'])
         self.dmVt_this_sigmas = dd['sigma_arr']
