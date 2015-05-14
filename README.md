@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """ Single pulse plotting tools..."""
 
 """ Waterfaller   : Plots frequency vs time. Shows dispersed/ de-dispersed pulse depending on the parameters given.
@@ -14,3 +15,7 @@
                     file as an input. """   
                                            
 
+=======
+# sp_utils
+Utilities for single pulse candidates
+>>>>>>> 46b3aecf90d4e740134f18f3948f87abf10e34b2
