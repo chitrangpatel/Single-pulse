@@ -1,4 +1,5 @@
-import numpy as np
+import numpy as _np
+from scipy.special import erf as _erf
 
 class spd:
     """
@@ -85,8 +86,8 @@ class spd:
      sweep_start_time
         The time at which to start plotting the dispersed reference line
     """
-    def __init__(self, npz_file):
-        dd = dict(np.load(npz_file))
+    def __init__(self, spd_file):
+        dd = dict(_np.load(spd_file))
         self.data_zerodm = dd['Data_zerodm']
         self.data_zerodm_dedisp = dd['Data_dedisp_zerodm']
         self.data_nozerodm = dd['Data_nozerodm']
@@ -94,7 +95,7 @@ class spd:
          
         self.spfiles = dd['singlepulse_files']
         self.dmVt_this_dms = dd['dm_arr']
-        self.dmVt_this_times = np.array(dd['time_list'])
+        self.dmVt_this_times = _np.array(dd['time_list'])
         self.dmVt_this_sigmas = dd['sigma_arr']
 
         self.dmsweep_delays = dd['delays_nozerodm']
@@ -106,9 +107,9 @@ class spd:
         self.telescope = ll[1]
         self.ra = ll[2]
         self.dec = ll[3]
-        self.ra_deg = np.sum(np.array(self.ra.split(":"), dtype=float) * np.array([15., 15./60., 15./3600.]))
-        dec_arr = np.array(self.dec.split(":"), dtype=float)
-        self.dec_deg = np.sum(np.abs(dec_arr) * np.sign(dec_arr[0]) * np.array([1., 1./60., 1./3600.]))
+        self.ra_deg = _np.sum(_np.array(self.ra.split(":"), dtype=float) * _np.array([15., 15./60., 15./3600.]))
+        dec_arr = _np.array(self.dec.split(":"), dtype=float)
+        self.dec_deg = _np.sum(_np.abs(dec_arr) * _np.sign(dec_arr[0]) * _np.array([1., 1./60., 1./3600.]))
         self.mjd = float(ll[4])
         self.total_obs_time = float(ll[15])
 
@@ -127,7 +128,7 @@ class spd:
         self.waterfall_nbins = self.data_zerodm_dedisp.shape[1]
         self.waterfall_nsubs = int(ll[6])
         self.waterfall_prededisp_nbins = int(ll[19])
-        self.waterfall_downsamp = int(np.round(self.waterfall_tsamp/self.tsamp))
+        self.waterfall_downsamp = int(_np.round(self.waterfall_tsamp/self.tsamp))
         self.min_freq = float(ll[20])
         self.max_freq = float(ll[21])
         self.sweep_duration = float(ll[22])
@@ -135,7 +136,7 @@ class spd:
 
         # Get variance from the half of the waterfall plot that definitely should not contain the pulse
         # (which is 1/4 of the way into the plot)
-        self.varprof = np.var(self.data_zerodm_dedisp.sum(axis=0)[(self.waterfall_nbins/2):])
+        self.varprof = _np.var(self.data_zerodm_dedisp.sum(axis=0)[(self.waterfall_nbins/2):])
 
     def waterfall_time_axis(self, use_timeseries_time=False):
         """
@@ -146,7 +147,7 @@ class spd:
         self.waterfall_tsamp
         self.waterfall_start_time
         self.waterfall_nbins
-        time_axis = np.arange(0, self.waterfall_duration, self.waterfall_tsamp)[:self.waterfall_nbins]
+        time_axis = _np.arange(0, self.waterfall_duration, self.waterfall_tsamp)[:self.waterfall_nbins]
         if use_timeseries_time: return time_axis + self.waterfall_start_time
         else: return time_axis
 
@@ -154,4 +155,33 @@ class spd:
         """
         Generate a frequency axis for the waterfall plot.
         """
-        return np.linspace(self.min_freq, self.max_freq, self.waterfall_nsubs, endpoint=False)
+        return _np.linspace(self.min_freq, self.max_freq, self.waterfall_nsubs, endpoint=False)
+
+def ddm_response(ddm, width_ms, band_MHz=(1214., 1537.)):
+    """
+    Returns the factor by which the S/N of a pulse of a given width observed
+    in a particular radio band should decrease given an error in dispersion
+    measure.
+
+    ddm
+       Difference from optimal dispersion measure in pc/cm^3
+    width_ms
+       Pulse width in milliseconds
+    band
+       The bottom and top of the observing band in MHz
+        (default: the Arecibo Mock band)
+    """
+    if _np.isscalar(ddm):
+        ddm = _np.array([ddm])
+        scal = True
+    else:
+        ddm = _np.array(ddm)
+        scal = False
+    band_MHz = _np.array(band_MHz)
+    zeta = 6.91e-3 * ddm * _np.diff(band_MHz)[0] / (width_ms * (_np.mean(band_MHz)/1000.)**3)
+    result = _np.zeros_like(ddm)
+    where_nonzero = _np.where(zeta != 0)
+    result[where_nonzero] = 0.5*_np.sqrt(_np.pi)*_erf(zeta[where_nonzero])/zeta[where_nonzero]
+    result[zeta == 0] = 1.
+    if scal: return result[0]
+    else: return result
