@@ -96,16 +96,13 @@ def maskdata(data, start_bin, nbinsextra):
     Output:
         data: 2D array after masking. 
     """
-    print 'reading maskfile'
+    print 'masking ...'
     maskfile = options.maskfile
     if maskfile is not None:
-        print 'running rfifind'
         rfimask = rfifind.rfifind(maskfile)
         mask = waterfaller.get_mask(rfimask, start_bin, nbinsextra)
         # Mask data
         data = data.masked(mask, maskval='median-mid80')
-        print data.data.shape
-        print 'masked'
     return data
         
 def main():
@@ -195,6 +192,7 @@ def main():
                 text_array = np.append(text_array,data.numspectra)
                 text_array = np.append(text_array,data.freqs.min())
                 text_array = np.append(text_array,data.freqs.max())
+                print "plotting waterfall plots and dedispersed time series..." 
                 sp_pgplot.ppgplot.pgopen(temp_filename+'.ps/VPS')
                 sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
 
@@ -364,6 +362,7 @@ def main():
                 dm_arr = np.array([arr_2[i][0] for i in range(len(arr))], dtype = np.float32)
                 sigma_arr = np.array([arr_2[i][1] for i in range(len(arr))], dtype = np.float32)
                 time_arr = np.array([arr_2[i][2] for i in range(len(arr))], dtype = np.float32)
+                print "plotting S/N vs DM ..." 
                 sp_pgplot.ppgplot.pgsvp(0.48, 0.73, 0.65, 0.90)
                 sp_pgplot.ppgplot.pgswin(np.min(dm_arr), np.max(dm_arr), 0.95*np.min(sigma_arr), 1.05*np.max(sigma_arr))
                 sp_pgplot.ppgplot.pgsch(0.8)
@@ -388,6 +387,7 @@ def main():
                 times = time_range
                 sigma_range = sigmas
                 sigmas = sigma_range
+                print "plotting DM vs Time ..."
                 sp_pgplot.dm_time_plot(dm_range, time_range, sigma_range, dm_list, sigma_arr, time_list, Total_observed_time)
                 with open(temp_filename+".spd", 'wb') as f:
                     np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array, singlepulse_files = singlepulse_files)
