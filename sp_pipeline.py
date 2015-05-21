@@ -401,7 +401,7 @@ def main():
 if __name__=='__main__':
     parser = optparse.OptionParser(prog="sp_pipeline..py", \
                         version=" Chitrang Patel (May. 12, 2015)", \
-                        usage="%prog INFILE(PsrFits FILE, SINGLEPULSE FILES)", \
+                        usage="%prog --infile (.inf file) --txtfile (groups.txt file) --mask (.mask file) INFILES(.fits FILE, .singlepulse FILES in that order)", \
                         description="Create single pulse plots to show the " \
                                     "frequency sweeps of a single pulse,  " \
                     "DM vs time, and SNR vs DM,"\
