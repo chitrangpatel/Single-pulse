@@ -181,20 +181,35 @@ def main():
     sp_pgplot.ppgplot.pgpt(dm_arr, sigma_arr, 20)
     
     # DM vs Time
-    spfiles = npzfile['singlepulse_files']
+    spfiles = args[1:]
     threshold = 5.5
-    dms, times, sigmas, files = sp_pgplot.gen_arrays(dm_arr, threshold, spfiles)
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
-    
-    sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time)
+    if len(args)>1:
+        dms, times, sigmas, files = sp_pgplot.gen_arrays(dm_arr, threshold, spfiles)
+        sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time)
+    else:
+        print "You need .singlepulse files to plot DM vs Time plot."
+        sp_pgplot.ppgplot.pgsvp(0.48, 0.97, 0.1, 0.54)
+        sp_pgplot.ppgplot.pgsch(0.8)
+        sp_pgplot.ppgplot.pgslw(3)
+        sp_pgplot.ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
+        sp_pgplot.ppgplot.pgslw(3)
+        sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time (s)")
+        sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "DM (pc cm\u-3\d)")
     sp_pgplot.ppgplot.pgiden()
     sp_pgplot.ppgplot.pgclos()
     
 if __name__ == '__main__':
     parser = optparse.OptionParser(prog="waterfaller.py", \
-				   usage = "%prog [OPTIONS] INFILE (.spd file)")
+				   usage = "%prog [OPTIONS] INFILE (.spd file) INFILES (.singlepulse files)")
     parser.add_option("-x", "--xwin", action="store_true", dest="xwin",
                       default=False, help="Don't make a postscript plot, just use an X-window")
     (options, args) = parser.parse_args()
+    if len(args) == 0:
+        print "need .spd file and .singlepulse files in that order."
+        sys.exit()
+    if not args[0].endswith(".spd"):
+        print "the first file must be a .spd file"
+        sys.exit()
     main() 
