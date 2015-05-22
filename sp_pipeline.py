@@ -105,19 +105,24 @@ def maskdata(data, start_bin, nbinsextra, maskfile):
         # Mask data
         data = data.masked(mask, maskval='median-mid80')
     return data
-def dedispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat):
+def waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat):
+    """
+    Runs the waterfaller. If dedispersing, there will be extra bins added to the 2D plot.
+    Inputs:
+        Inputs required for the waterfaller. dm, nbins, etc. 
+    Outputs:
+       data: 2D array as an "object" 
+       array: 2D array ready to be plotted by sp_pgplot.plot_waterfall(array). 
+    """
     data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
     Data = np.array(data.data)
-    ragfac = float(nbins)/bins
-    dmrange, trange = Data.shape
-    nbinlim = np.int(trange * ragfac)
+    if dm is not None:            # If dedispersing the data, extra bins will be added. We need to cut off the extra bins to get back the appropriate window size.   
+        ragfac = float(nbins)/bins
+        dmrange, trange = Data.shape
+        nbinlim = np.int(trange * ragfac)
+    else:
+        nbinlim = nbins
     array = Data[..., :nbinlim]
-    array = array[::-1]
-    return data, array
-def dispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat):
-    data, bins = waterfaller.waterfall(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
-    Data = np.array(data.data)[..., :nbins]
-    array = Data
     array = array[::-1]
     return data, array
 def main():
@@ -213,7 +218,7 @@ def main():
                 temp_filename = basename+"_DM%.1f_%.1fs_rank_%i"%(subdm, topo_start_time, rank)
                 # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
                 print_debug("Running waterfaller with Zero-DM OFF...")
-                data, Data_dedisp_nozerodm = dedispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, Data_dedisp_nozerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
                 # Add additional information to the header information array
                 text_array = np.array([fn, 'Arecibo', RA, dec, MJD, rank, nsub, nbins, subdm, sigma, sample_number, duration, width_bins, pulse_width, rawdatafile.tsamp, Total_observed_time, topo_start_time, data.starttime, data.dt, data.numspectra, data.freqs.min(), data.freqs.max()])
 
@@ -221,7 +226,7 @@ def main():
                 print_debug("Running Waterfaller with Zero-DM ON...")
                 integrate_dm = subdm
                 zerodm = True
-                data, Data_dedisp_zerodm = dedispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, zerodm_masked_dat)
+                data, Data_dedisp_zerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, zerodm_masked_dat)
                 ####Sweeped without zerodm
                 integrate_dm = None
                 start = start + (0.25*duration)
@@ -235,7 +240,7 @@ def main():
                 zerodm = None
                 dm = None
                 zerodm_masked_dat = copy.copy(masked_dat)
-                data, Data_nozerodm = dispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, Data_nozerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
                 text_array = np.append(text_array, sweep_duration)
                 text_array = np.append(text_array, data.starttime)
                 # Array to Construct the sweep
@@ -248,7 +253,7 @@ def main():
                 # Sweeped with zerodm-on 
                 zerodm = True
                 downsamp_temp = 1
-                data, Data_zerodm = dedispersed_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp_temp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
+                data, Data_zerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp_temp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
                 #### Array for Plotting DM vs SNR
                 print_debug("Making arrays for DM vs Signal to Noise...")
                 temp_line = file[lis[ii]-6]
