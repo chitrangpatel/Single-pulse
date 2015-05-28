@@ -16,7 +16,6 @@ import copy
 from time import strftime
 import infodata
 from subprocess import Popen, PIPE
-
 import numpy as np
 import optparse
 import waterfaller
