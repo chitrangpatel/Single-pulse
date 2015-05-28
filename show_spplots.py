@@ -1,13 +1,5 @@
 #! /usr/bin/env python
 
-"""
-show_spplots.py 
-Makes single pulse plots. Reads in .spd files and .singlepulse files.
-usage: ./show_spplots -o <outfile base name> <.spd file> <.singlepulse files>
-
-Chitrang Patel 21 May 2015.
-"""
-
 import sys
 import os
 import numpy as np
