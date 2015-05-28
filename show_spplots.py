@@ -6,8 +6,8 @@ import numpy as np
 import optparse
 import sp_pgplot
 from subprocess import Popen, PIPE
-
-
+import tarfile
+import glob
 def plot(spdfile, singlepulsefiles, xwin, outfile):
     temp_file = spdfile
     if not temp_file.endswith(".spd"):
@@ -189,11 +189,11 @@ def plot(spdfile, singlepulsefiles, xwin, outfile):
     threshold = 5.5
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
-    if len(spfiles)>0:
+    if len(spfiles)==2:
         dms, times, sigmas, files = sp_pgplot.gen_arrays(dm_arr, threshold, spfiles)
         sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time)
     else:
-        print "You need .singlepulse files to plot DM vs Time plot."
+        print "You need a .singlepulse.tgz file to plot DM vs Time plot."
         sp_pgplot.ppgplot.pgsvp(0.48, 0.97, 0.1, 0.54)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
@@ -201,6 +201,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile):
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time (s)")
         sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "DM (pc cm\u-3\d)")
+    sp_pgplot.ppgplot.pgsave()
     sp_pgplot.ppgplot.pgiden()
     sp_pgplot.ppgplot.pgclos()
 def main():
@@ -216,6 +217,12 @@ def main():
     if not args[0].endswith(".spd"):
         print "the first file must be a .spd file"
         sys.exit()
-    plot(args[0], args[1:], options.xwin, options.outfile)    
+    tar = tarfile.open(args[1], "r:gz")# read in the tarball
+    tar.extractall()# extract the tarball
+    filenames = tar.getnames()# get the filenames
+    plot(args[0], filenames, options.xwin, options.outfile)# make the sp plots   
+    for file in filenames:#remove the .singlepulse files
+        os.remove(file)
+    tar.close()
 if __name__ == '__main__':
     main() 
