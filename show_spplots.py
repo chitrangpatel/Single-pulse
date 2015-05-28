@@ -7,7 +7,7 @@ import optparse
 import sp_pgplot
 from subprocess import Popen, PIPE
 import tarfile
-import glob
+
 def plot(spdfile, singlepulsefiles, xwin, outfile):
     temp_file = spdfile
     if not temp_file.endswith(".spd"):
