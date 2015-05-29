@@ -21,7 +21,6 @@ import numpy as Num
 import types, math, ppgplot
 import fileinput
 import glob
-
 # True if we have an /XWIN or /XSERVE device open yet
 ppgplot_dev_open_ = 0
 
@@ -178,7 +177,36 @@ def read_sp_files(files):
                                         ('sample','uint32'),
                                         ('downfact','uint8')]))
     return Num.atleast_2d(data)
-def gen_arrays(dm, threshold, sp_files):    
+
+def read_tarfile(filenames, names, tar):
+    members = []
+    for name in names:
+        if name in filenames:
+            member = tar.getmember(name)
+            members.append(member)
+        else:
+            pass
+    fileinfo = []
+    filearr = []
+    for mem in members:
+        file = tar.extractfile(mem)
+        for line in file.readlines():
+            fileinfo.append(line)
+        filearr+=(fileinfo[1:])
+        fileinfo = []
+    temp_list = []
+    for i in range(len(filearr)):
+        temp_line = filearr[i].split()
+        temp_list.append(temp_line)
+    main_array = Num.asarray(temp_list)
+    main_array = Num.split(main_array, 5, axis=1)
+    main_array[0] = main_array[0].astype(Num.float16)
+    main_array[1] = main_array[1].astype(Num.float16)
+    main_array[2] = main_array[2].astype(Num.float16)
+    main_array[3] = main_array[3].astype(Num.int)
+    main_array[4] = main_array[4].astype(Num.int)
+    return main_array
+def gen_arrays(dm, threshold, sp_files, tar = None):    
     """
     Extract dms, times and signal to noise from each singlepulse file as 1D arrays.
     """
@@ -201,7 +229,10 @@ def gen_arrays(dm, threshold, sp_files):
             try:
                 singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
                 dm_time_files += singlepulsefiles
-                data = read_sp_files(singlepulsefiles)[0]
+                if tar is not None:
+                    data = read_tarfile(sp_files, singlepulsefiles, tar)
+                else:
+                    data = read_sp_files(singlepulsefiles)[0]
             except:
                 pass
         elif (i >= 3266) and (i < 5546):
@@ -212,7 +243,10 @@ def gen_arrays(dm, threshold, sp_files):
             try:
                 singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
                 dm_time_files += singlepulsefiles
-                data = read_sp_files(singlepulsefiles)[0]
+                if tar is not None:
+                    data = read_tarfile(sp_files, singlepulsefiles, tar)
+                else:
+                    data = read_sp_files(singlepulsefiles)[0]
             except:
                 pass
         elif i>=5546:
@@ -227,19 +261,30 @@ def gen_arrays(dm, threshold, sp_files):
             try:
                 singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
                 dm_time_files += singlepulsefiles
-                data = read_sp_files(singlepulsefiles)[0]
+                if tar is not None:
+                    data = read_tarfile(sp_files, singlepulsefiles, tar)
+                else:
+                    data = read_sp_files(singlepulsefiles)[0]
             except:
                 pass
         else:    
             try:
                 singlepulsefiles = [sp_files[sp_file] for sp_file in range(len(sp_files)) if ('DM'+str(i)+'.') in sp_files[sp_file]]
                 dm_time_files += singlepulsefiles
-                data = read_sp_files(singlepulsefiles)[0]
+                if tar is not None:
+                    data = read_tarfile(sp_files, singlepulsefiles, tar)
+                else:
+                    data = read_sp_files(singlepulsefiles)[0]
             except:
                 pass
-        dms = data['dm']
-        times = data['time']
-        sigmas = data['sigma']
+        if tar is not None:
+            dms = Num.reshape(data[0],(len(data[0]),))
+            times = Num.reshape(data[2],(len(data[1]),))
+            sigmas = Num.reshape(data[1],(len(data[2]),))
+        else:
+            dms = data['dm']
+            times = data['time']
+            sigmas = data['sigma']
         dms = Num.concatenate((dmss, dms), axis = 0)
         dmss = dms
         times = Num.concatenate((timess, times), axis = 0)

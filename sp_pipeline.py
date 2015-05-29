@@ -16,6 +16,7 @@ import copy
 from time import strftime
 import infodata
 from subprocess import Popen, PIPE
+
 import numpy as np
 import optparse
 import waterfaller
@@ -290,7 +291,7 @@ def main():
                 with open(temp_filename+".spd", 'wb') as f:
                     np.savez_compressed(f, Data_dedisp_nozerodm = Data_dedisp_nozerodm.astype(np.float16), Data_dedisp_zerodm = Data_dedisp_zerodm.astype(np.float16), Data_nozerodm = Data_nozerodm.astype(np.float16), delays_nozerodm = delays_nozerodm, freqs_nozerodm = freqs_nozerodm, Data_zerodm = Data_zerodm.astype(np.float16), dm_arr= map(np.float16, dm_arr), sigma_arr = map(np.float16, sigma_arr), dm_list= map(np.float16, dm_list), time_list = map(np.float16, time_list), text_array = text_array, singlepulse_files = singlepulse_files)
                 print_debug("Now plotting...")
-                show_spplots.plot(temp_filename+".spd", sp_files, xwin=False, outfile = basename)
+                show_spplots.plot(temp_filename+".spd", sp_files, xwin=False, outfile = basename, tar = None)
                 print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
         print_debug("Finished group %i... "%rank+strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Finished running waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
