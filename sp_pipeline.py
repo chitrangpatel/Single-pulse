@@ -20,11 +20,12 @@ from subprocess import Popen, PIPE
 import numpy as np
 import optparse
 import waterfaller
-import sp_pgplot
+import sp_utils
 import bary_and_topo
 import psr_utils
 import rfifind
 import show_spplots
+
 from pypulsar.formats import psrfits
 from pypulsar.formats import filterbank
 from pypulsar.formats import spectra
@@ -212,7 +213,7 @@ def main():
                     nbinsextra = N-1-start_bin
                 dat = rawdatafile.get_spectra(start_bin, nbinsextra)
                 masked_dat = maskdata(dat, start_bin, nbinsextra, options.maskfile)
-                zerodm_masked_dat = copy.copy(masked_dat)
+                zerodm_masked_dat = copy.deepcopy(masked_dat)
 
                 #make an array to store header information for the .npz files
                 temp_filename = basename+"_DM%.1f_%.1fs_rank_%i"%(subdm, topo_start_time, rank)
@@ -239,7 +240,7 @@ def main():
                 masked_dat = maskdata(dat, start_bin, nbins, options.maskfile)
                 zerodm = None
                 dm = None
-                zerodm_masked_dat = copy.copy(masked_dat)
+                zerodm_masked_dat = copy.deepcopy(masked_dat)
                 data, Data_nozerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, masked_dat)
                 text_array = np.append(text_array, sweep_duration)
                 text_array = np.append(text_array, data.starttime)
@@ -280,7 +281,7 @@ def main():
                     threshold = 5.50
                 sp_files = args[1:]
                 if (np.abs(subdm - DM) > 15):
-                    dms, time, sigmas, singlepulse_files = sp_pgplot.gen_arrays(dm_arr, threshold, sp_files)
+                    dms, time, sigmas, singlepulse_files = sp_utils.io.gen_arrays(dm_arr, threshold, sp_files, tar = None)
                     DM = subdm
                 dm_range = dms
                 dms = dm_range

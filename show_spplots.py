@@ -7,6 +7,7 @@ import optparse
 import tarfile 
 from subprocess import Popen, PIPE
 import sp_pgplot
+import sp_utils
 
 def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     temp_file = spdfile
@@ -57,10 +58,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
         if (outfile == "spdplot"): # default filename
             sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
         else:
-            if outfile==fn[:-5]:
-                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.ps/VPS'%(subdm, (start+0.25*duration), rank))
-            else:
-                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+            sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
     sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
     sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
     sp_pgplot.ppgplot.pgswin(datastart - start, datastart -start+datanumspectra*datasamp, min_freq, max_freq)
@@ -190,7 +188,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
     if len(spfiles) > 2:
-        dms, times, sigmas, files = sp_pgplot.gen_arrays(dm_arr, threshold, spfiles, tar)
+        dms, times, sigmas, files = sp_utils.io.gen_arrays(dm_arr, threshold, spfiles, tar)
         sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time)
     else:
         print "You need a .singlepulse.tgz file to plot DM vs Time plot."
@@ -220,7 +218,6 @@ def main():
     if len(args) == 2:
         tar = tarfile.open(args[1], "r:gz")# read in the tarball
         filenames = tar.getnames()# get the filenames
-        print "plotting..."
         plot(args[0], filenames, options.xwin, options.outfile, tar)# make the sp plots   
         tar.close()
     else:
