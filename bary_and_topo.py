@@ -52,4 +52,3 @@ def bary_to_topo(infofilenm, ephem="DE200"):
    tts = Num.arange(nn, dtype='d') * dt
    bts = (bts - bts[0]) * SECPERDAY
    return tts, bts
-
