@@ -165,7 +165,7 @@ def plot_waterfall(z, x=None, y=None, title=None, rangex=None, rangey=None, \
                          rangex[1], rangey[1])  
 
 
-def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed_time):
+def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed_time, xwin):
     """
     Plot DM vs Time.
     """
@@ -196,13 +196,16 @@ def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed
     times = Num.array(times)
     dm_arr = Num.array(dm_arr)
     time_arr = Num.array(time_arr)
-    for ii in [26, 25, 24, 23, 22, 21, 20]:
+    for ii in [26, 25, 24, 23, 22, 21, 20]:             # Plots all the singlepulse events in the DM vs time window.
         inds = Num.nonzero(cand_symbols == ii)[0]
         ppgplot.pgshls(1, 0.0, 0.5, 0.0)
         ppgplot.pgpt(times[inds], dms[inds], ii)
-    for ii in [26, 25, 24, 23, 22, 21, 20]:
+    for ii in [26, 25, 24, 23, 22, 21, 20]:              # Plots the main pulse in black(ps window)/White(xwin window)
         inds_1 = Num.nonzero(cand_symbols_group == ii)[0]
-        ppgplot.pgshls(1, 0.0, 0.0, 0.0)
+        if xwin:
+            ppgplot.pgshls(1, 0.0, 0.8, 0.0)
+        else:
+            ppgplot.pgshls(1, 0.0, 0.0, 0.0)
         ppgplot.pgpt(time_arr[inds_1], dm_arr[inds_1], ii)
 
 #########################################################################
