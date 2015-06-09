@@ -27,7 +27,7 @@ ppgplot_dev_open_ = 0
 ppgplot_dev_prep_ = 0
 
 # Default plotting device
-ppgplot_device_ = '/XWIN'
+ppgplot_device_ = ""
 
 # Default font to use
 ppgplot_font_ = 1
@@ -128,7 +128,7 @@ def plot_waterfall(z, x=None, y=None, title=None, rangex=None, rangey=None, \
             aspect:    Aspect ratio                (default = 1 (square))
             ticks:     Ticks point in or out       (default = 'out')   
             panels:    Number of subpanels [r,c]   (default = [1,1])
-            device:    PGPLOT device to use        (default = '/XWIN')   
+            device:    PGPLOT device to use        (default = '')   
         Note:  Many default values are defined in global variables
             with names like ppgplot_font_ or ppgplot_device_.
    """
@@ -196,11 +196,11 @@ def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed
     times = Num.array(times)
     dm_arr = Num.array(dm_arr)
     time_arr = Num.array(time_arr)
-    for ii in [26, 25, 24, 23, 22, 21, 20]:             # Plots all the singlepulse events in the DM vs time window.
+    for ii in [26, 25, 24, 23, 22, 21, 20]:
         inds = Num.nonzero(cand_symbols == ii)[0]
         ppgplot.pgshls(1, 0.0, 0.5, 0.0)
         ppgplot.pgpt(times[inds], dms[inds], ii)
-    for ii in [26, 25, 24, 23, 22, 21, 20]:              # Plots the main pulse in black(ps window)/White(xwin window)
+    for ii in [26, 25, 24, 23, 22, 21, 20]:
         inds_1 = Num.nonzero(cand_symbols_group == ii)[0]
         if xwin:
             ppgplot.pgshls(1, 0.0, 0.8, 0.0)
