@@ -199,7 +199,6 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time (s)")
         sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "DM (pc cm\u-3\d)")
-    sp_pgplot.ppgplot.pgsave()
     sp_pgplot.ppgplot.pgiden()
     sp_pgplot.ppgplot.pgclos()
 def main():
