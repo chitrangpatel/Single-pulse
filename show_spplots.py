@@ -183,12 +183,13 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     sp_pgplot.ppgplot.pgpt(dm_arr, sigma_arr, 20)
     
     # DM vs Time
+    print "Making arrays for DM vs time plot"
     spfiles = singlepulsefiles
-    threshold = 5.5
+    threshold = 5.0
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
     if len(spfiles) > 2:
-        dms, times, sigmas, files = sp_utils.io.gen_arrays(dm_arr, threshold, spfiles, tar)
+        dms, times, sigmas = sp_utils.io.gen_arrays(dm_arr, threshold, spfiles, tar)
         sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time, xwin)
     else:
         print "You need a .singlepulse.tgz file to plot DM vs Time plot."
