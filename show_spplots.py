@@ -8,6 +8,7 @@ import tarfile
 from subprocess import Popen, PIPE
 import sp_pgplot
 import sp_utils
+import memory
 
 def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     temp_file = spdfile
@@ -189,8 +190,10 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
     if len(spfiles) > 2:
-        dms, times, sigmas = sp_utils.io.gen_arrays(dm_arr, threshold, spfiles, tar)
+        print "Before DM_time plot/array", memory.resident()/(1024.0**3)
+        dms, times, sigmas, filelist = sp_utils.io.gen_arrays(dm_arr, threshold, spfiles, tar)
         sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time, xwin)
+        print "After DM_time plot/array", memory.resident()/(1024.0**3)
     else:
         print "You need a .singlepulse.tgz file to plot DM vs Time plot."
         sp_pgplot.ppgplot.pgsvp(0.48, 0.97, 0.1, 0.54)
