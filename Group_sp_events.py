@@ -29,8 +29,8 @@ from Pgplot import *
 CLOSE_DM = 2 # pc cm-3
 FRACTIONAL_SIGMA = 0.9 # change to 0.8?
 MIN_GROUP = 50 #minimum group size that is not considered noise
-TIME_THRESH = 0.1
-DM_THRESH = 0.5 #FIXME: at high DMs, DM step size = 1 for palfa! DM_THRESH should depend on sp's DM
+TIME_THRESH = 0.1 
+DM_THRESH = 0.5 #Multiplies this number by a factor depending on the DDplan.
 MIN_SIGMA = 8
 DEBUG = True # if True, will be verbose
 PLOT = True
@@ -339,16 +339,13 @@ def flag_noise(groups, min_group=MIN_GROUP):
         dmt = dmthreshold(grp.min_dm)
         # Decides the min group size on the downsampling rate which depends on the min DM of the group. At higher DMs the min group size needed is smaller.
         if (dmt == 1):
-            min_group = 40
+            min_group = 45
         elif (dmt == 2):
-            min_group = 35
+            min_group = 40
         elif (dmt == 3):
-            min_group = 30
-        elif (dmt == 5):
-            min_group = 25
+            min_group = 35
         else:
-            min_group = 20
-        print min_group
+            min_group = 30
         if grp.numpulses < min_group:
             grp.rank = 1
 
@@ -393,15 +390,13 @@ def rank_groups(groups, min_group = MIN_GROUP):
         dmt = dmthreshold(grp.min_dm)
         # Decides the min group size on the downsampling rate which depends on the min DM of the group. At higher DMs the min group size needed is smaller.
         if (dmt == 1):
-            min_group = 40
+            min_group = 45
         elif (dmt == 2):
-            min_group = 35
+            min_group = 40
         elif (dmt == 3):
-            min_group = 30
-        elif (dmt == 5):
-            min_group = 25
+            min_group = 35
         else:
-            min_group = 20
+            min_group = 30
         if len(grp.singlepulses) < min_group:
             grp.rank = 1
         elif grp.rank != 2: # don't overwrite ranks of rfi groups
