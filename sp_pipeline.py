@@ -163,6 +163,8 @@ def main():
     print_debug('getting file..')
     rawdatafile = psrfits.PsrfitsFile(args[0])
     bin_shift = np.round(time_shift/rawdatafile.tsamp).astype('int')
+    numcands = 0 # candidate counter. Use this to decide the maximum bumber of candidates to plot.
+    loop_must_break = False # dont break the loop unless num of cands >100.
     for group in [6, 5, 4, 3, 2]:
         rank = group+1
         if files[group] != "Number of rank %i groups: 0 "%rank:
@@ -268,6 +270,13 @@ def main():
                 print_debug("Now plotting...")
                 show_spplots.plot(temp_filename+".spd", args[1:], xwin=False, outfile = basename, tar = None)
                 print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
+                numcands+= 1
+                print_debug('Finished sp_candidate : %i'%numcands)
+                if numcands > 100:    # Max number of candidates to plot 100.
+                    loop_must_break = True
+                    break
+            if loop_must_break:
+                break
         print_debug("Finished group %i... "%rank+strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Finished running waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
 
