@@ -134,6 +134,9 @@ def main():
     parser.add_option('--mask', dest='maskfile', type='string', \
                         help="Mask file produced by rfifind. (Default: No Mask).", \
                         default=None)
+    parser.add_option('-n', dest='maxnumcands', type='int', \
+                        help="Maximum number of candidates to plot. (Default: 100).", \
+                        default=100)
     options, args = parser.parse_args()
     if not hasattr(options, 'infile'):
         raise ValueError("A .inf file must be given on the command line! ") 
@@ -145,6 +148,7 @@ def main():
     Detrendlen = 50
     if not args[0].endswith("fits"):
         raise ValueError("The first file must be a psrFits file! ") 
+    print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
     basename = args[0][:-5]
     filetype = "psrfits"
     inffile = options.infile
@@ -272,7 +276,7 @@ def main():
                 print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
                 numcands+= 1
                 print_debug('Finished sp_candidate : %i'%numcands)
-                if numcands > 100:    # Max number of candidates to plot 100.
+                if numcands > options.maxnumcands:    # Max number of candidates to plot 100.
                     loop_must_break = True
                     break
             if loop_must_break:
