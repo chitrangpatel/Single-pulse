@@ -276,7 +276,7 @@ def main():
                 print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
                 numcands+= 1
                 print_debug('Finished sp_candidate : %i'%numcands)
-                if numcands > options.maxnumcands:    # Max number of candidates to plot 100.
+                if numcands >= options.maxnumcands:    # Max number of candidates to plot 100.
                     loop_must_break = True
                     break
             if loop_must_break:
