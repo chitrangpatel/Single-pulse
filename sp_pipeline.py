@@ -202,7 +202,8 @@ def main():
                 integrate_dm = None
                 sigma = values[ii][1]
                 sweep_posn = 0.0
-                topo_start_time = values[ii][2] - topo_timeshift(values[ii][2], time_shift, topo)[0]
+                bary_start_time = values[ii][2]
+                topo_start_time = bary_start_time - topo_timeshift(bary_start_time, time_shift, topo)[0]
                 sample_number = values[ii][3]
                 width_bins = values[ii][4]
                 binratio = 50
@@ -257,6 +258,7 @@ def main():
                 data, Data_nozerodm = waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, data)
                 text_array = np.append(text_array, sweep_duration)
                 text_array = np.append(text_array, data.starttime)
+                text_array = np.append(text_array, bary_start_time)
                 # Array to Construct the sweep
                 if sweep_dm is not None:
                     ddm = sweep_dm-data.dm

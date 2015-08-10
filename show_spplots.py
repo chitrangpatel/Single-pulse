@@ -37,8 +37,8 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     pulse_width = float(text_array[13])
     tsamp = float(text_array[14])
     Total_observed_time = float(text_array[15])
-    start = float(text_array[16])
-    start = start - 0.25*duration
+    topo_start = float(text_array[16])
+    start = topo_start - 0.25*duration
     datastart = float(text_array[17])
     datasamp = float(text_array[18])
     datanumspectra = float(text_array[19])
@@ -46,6 +46,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     max_freq = float(text_array[21])
     sweep_duration = float(text_array[22])
     sweeped_start = float(text_array[23])
+    bary_start = float(text_array[24])
     if xwin:
         pgplot_device = "/XWIN"
     else:
@@ -153,7 +154,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     
     #### Figure texts 
     sp_pgplot.ppgplot.pgsvp(0.745, 0.97, 0.64, 0.909)
-    sp_pgplot.ppgplot.pgsch(0.85)
+    sp_pgplot.ppgplot.pgsch(0.7)
     sp_pgplot.ppgplot.pgslw(3)
     sp_pgplot.ppgplot.pgmtxt('T', -1.1, 0.01, 0.0, "RA: %s" %RA)
     sp_pgplot.ppgplot.pgmtxt('T', -2.6, 0.01, 0.0, "DEC: %s" %dec)
@@ -166,6 +167,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     sp_pgplot.ppgplot.pgmtxt('T', -13.1, 0.01, 0.0, "Number of subbands: %i" %nsub)
     sp_pgplot.ppgplot.pgmtxt('T', -14.6, 0.01, 0.0, "Pulse width: %.2f ms" %(pulse_width*1e3))
     sp_pgplot.ppgplot.pgmtxt('T', -16.1, 0.01, 0.0, "Sampling time: %.3f \gms" %(tsamp*1e6))
+    sp_pgplot.ppgplot.pgmtxt('T', -17.6, 0.01, 0.0, "Barycentric pulse peak time: %.2f s" %(bary_start))
     sp_pgplot.ppgplot.pgsvp(0.07, 0.7, 0.01, 0.05)
     sp_pgplot.ppgplot.pgmtxt('T', -2.1, 0.01, 0.0, "%s" %fn)
     
