@@ -23,24 +23,31 @@ import matplotlib.pyplot as plt
 #from guppy import hpy # for memory usage
 #from memory_profiler import profile
 from Pgplot import *
-
+from scipy.special import erf
+import optparse
+import sys
+import memory
 #h = hpy()
 #h.setref()
 CLOSE_DM = 2 # pc cm-3
 FRACTIONAL_SIGMA = 0.9 # change to 0.8?
+# MIN_GROUP, DM_THRESH, TIME_THRESH will change later on depending on the DDplan.
 MIN_GROUP = 50 #minimum group size that is not considered noise
-TIME_THRESH = 0.1 
-DM_THRESH = 0.5 #Multiplies this number by a factor depending on the DDplan.
+TIME_THRESH = 0.1
+DM_THRESH = 0.5 
+
 MIN_SIGMA = 8
 DEBUG = True # if True, will be verbose
 PLOT = True
 PLOTTYPE = 'pgplot' # 'pgplot' or 'matplotlib'
 CHECKDMSPAN = True # set whether or not to check if the DM span is larger than MAX_DMRANGE
-MAX_DMRANGE = 150 # pc cm-3
 ALL_RANKS_ORDERED = [1,2,0,3,4,7,5,6]
 RANKS_TO_WRITE = [2,0,3,4,7,5,6]
-RANKS_TO_PLOT = [2,0,3,4,7,5,6]
-
+def ranks_to_plot(RANKS_TO_PLOT, min_rank):
+    for i in range(min_rank):
+        if i in RANKS_TO_PLOT:
+            RANKS_TO_PLOT.remove(i)
+    return RANKS_TO_PLOT
 def dmthreshold(dm):
     """ Sets the factor which multiplies the DMthreshold and time_threshold. The factor is basically the downsampling rate. 
         This makes the DM_THRESH and TIME_THRESH depend on the DM instead of having fixed values throughout. This helps at 
@@ -61,7 +68,7 @@ def dmthreshold(dm):
     return dmt
 
     
-def old_read_sp_files():
+def old_read_sp_files(sp_files):
     """*** OLD VERSION ***
         Read all *.singlepulse files in the current directory.
 	Return 5 arrays (properties of all single pulses):
@@ -74,7 +81,7 @@ def old_read_sp_files():
                                              ('sample','uint32'),
                                              ('downfact','uint8')]))
 
-    for file in glob.glob('*.singlepulse'):
+    for file in sp_files:
        if os.path.getsize(file):
            curr = np.atleast_2d(np.loadtxt(file, dtype=np.dtype([('dm', 'float64'),('sigma','float32'),('time','float64'),('sample','uint32'),('downfact','uint8')])))
            tmp_sp_params = np.concatenate([tmp_sp_params, curr], axis=1)
@@ -82,16 +89,16 @@ def old_read_sp_files():
     return tmp_sp_params
 
 
-def read_sp_files():
+def read_sp_files(sp_files):
     """Read all *.singlepulse files in the current directory.
 	Return 5 arrays (properties of all single pulses):
 		DM, sigma, time, sample, downfact.
     """
-    finput = fileinput.input(glob.glob('*.singlepulse'))
+    finput = fileinput.input(sp_files)
     data = np.loadtxt(finput, 
-                      dtype=np.dtype([('dm', 'float64'),
+                      dtype=np.dtype([('dm', 'float32'),
                                       ('sigma','float32'),
-                                      ('time','float64'),
+                                      ('time','float32'),
                                       ('sample','uint32'),
                                       ('downfact','uint8')]))
     return np.atleast_2d(data)
@@ -243,6 +250,9 @@ def create_groups(sps, min_nearby=1, time_thresh=TIME_THRESH, \
             # At least min_nearby nearby SP events
             grp = SinglePulseGroup(*sps[ii])
             groups.append(grp)
+        if ii==10000:
+            print ii
+            break
     return groups
 
 
@@ -348,7 +358,6 @@ def flag_noise(groups, min_group=MIN_GROUP):
             min_group = 30
         if grp.numpulses < min_group:
             grp.rank = 1
-
     return groups
 
 
@@ -415,7 +424,12 @@ def rank_groups(groups, min_group = MIN_GROUP):
            
             maxsigmas = sigmas.max(axis=1)
             avgsigmas = sigmas.mean(axis=1)
-            
+            # standard deviation in signal to noise values in the group. 
+            stdsigmas = sigmas.std(axis=1)
+            # The largest std deviation
+            maxstd = np.ma.max(stdsigmas)
+            # The smallest std deviation
+            minstd = np.ma.min(stdsigmas)
             # The largest maxsigma
             maxsigma = np.ma.max(maxsigmas)
             # The smallest maxsigma
@@ -424,8 +438,9 @@ def rank_groups(groups, min_group = MIN_GROUP):
             maxavgsigma = np.ma.max(avgsigmas)
             # The smallest avgsigma
             minavgsigma = np.ma.min(avgsigmas)
-         
-            if maxavgsigma<1.05*minavgsigma:
+                       
+            #if maxavgsigma<1.05*minavgsigma:
+            if all(stdsigma < 0.1 for stdsigma in stdsigmas): 
                 # Sigmas pretty much constant. Group is RFI
                 # FIXME: do this better; there can be fluctuations! use stddev
                 grp.rank = 2
@@ -466,18 +481,51 @@ def rank_groups(groups, min_group = MIN_GROUP):
                                 (avgsigmas[1] > avgsigmas[4]) and \
                                 maxsigma>1.15*minsigma:
                                 grp.rank = 6
-    for grp in groups:
-        if grp.rank == 0:
-            # check for RFI behaviour - const sigma
-            pass #FIXME -- do this above instead so don't loop twice?
+            if any(stdsigma < 0.1 for stdsigma in stdsigmas) and (grp.max_sigma < 5.5): # if max sigma of the group is less than 5.5 and the sigma distribution is mostly flat, then it is not likely to be astrophysical.
+                grp.rank = 0
+            if grp.rank == 0:
+                pass 
 
+def ddm_response(ddm, width_ms, band_MHz=(1214., 1537.)):
+    if np.isscalar(ddm):
+        ddm = np.array([ddm])
+        scal = True
+    else:
+        ddm = np.array([ddm])
+        scal = False
+    band_MHz = np.array(band_MHz)
+    zeta = 6.91e-3 * ddm * np.diff(band_MHz)[0] / (width_ms * (np.mean(band_MHz)/1000.)**3)
+    result = np.zeros_like(ddm)
+    where_nonzero = np.where(zeta != 0)
+    result[where_nonzero] = 0.5*np.sqrt(np.pi)*erf(zeta[where_nonzero])/zeta[where_nonzero]
+    result[zeta == 0] = 1.
+    if scal: return result[0]
+    else: return result
 
-def check_dmspan(groups):
+def theoritical_dmspan(maxsigma, minsigma, width_ms, band_MHz = (1214., 1537.)):
+    # since the sigma threshold = 5
+    sigma_limit = minsigma/maxsigma
+    # spans over a dm range of 1000 (500*2)  
+    ddm = np.linspace(0, 5000, 50001)
+    # makes a normalized gaussian of sigma values
+    sigma_range = ddm_response(ddm, width_ms, band_MHz=(1214., 1537.))
+    # Returns te index where sigma_limit is closest to one of the values in sigma_range
+    ind = (np.abs(sigma_range-sigma_limit)).argmin()
+    return 2*ddm[ind]
+
+def check_dmspan(groups, MAX_DMRANGE):
     """Read in groups and check whether each group's DM span exceeds the threshold.
     """
     for grp in groups:
-        if grp.max_dm-grp.min_dm > MAX_DMRANGE:
-            #print_debug("Group exceeds max DM span. Initial rank: %s" % 
+        for sp in grp.singlepulses:
+            if sp[1] == grp.max_sigma:
+                downsamp = (sp[2]/6.54761904761905e-05)/sp[3]
+                width_ms = 1000.0*sp[4]*6.54761904761905e-05*downsamp
+                break
+        if (grp.max_dm-grp.min_dm > 5*theoritical_dmspan(grp.max_sigma, 5.0, width_ms)) or \
+            (grp.max_dm-grp.min_dm > MAX_DMRANGE):
+            # checks if the DM span is more than 5 times theoritical dm value.
+            #print_debug("Group exceeds max allowed DM span. Initial rank: %s" % 
             #            grp.rank)
             if (grp.rank == 5) or (grp.rank == 6): #if group is good or excellent
                 grp.rank = 7 # mark group as good but with an RFI-like DM span
@@ -508,7 +556,7 @@ def get_obs_info():
         return {'T': T, 'RA': RA, 'dec': dec, 'src': src, 'MJD': MJD, 'telescope': telescope, 'freq': freq}
 
 
-def plot_sp_rated_all(groups, ylow=0, yhigh=100, xlow=0, xhigh=120):
+def plot_sp_rated_all(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
     """Take in dict of Single Pulse Group lists and 
         plot the DM vs. t for all, with the plotted 
         colour corresponding to group rank. 
@@ -522,7 +570,7 @@ def plot_sp_rated_all(groups, ylow=0, yhigh=100, xlow=0, xhigh=120):
     size = []
     colors = []
     for grp in groups:
-        if grp.rank not in RANKS_TO_PLOT:
+        if grp.rank not in ranks:
             continue
         if grp.min_dm < yhigh and grp.max_dm > ylow:
             for sp in grp.singlepulses:
@@ -551,7 +599,7 @@ def plot_sp_rated_all(groups, ylow=0, yhigh=100, xlow=0, xhigh=120):
     plt.savefig('grouped_sps_DMs%s-%s.png' % (ylow, yhigh), dpi=300)
 
 
-def plot_sp_rated_pgplot(groups, ylow=0, yhigh=100, xlow=0, xhigh=120):
+def plot_sp_rated_pgplot(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
     """Plot groups according to their ranks. Uses pgplot rather 
         than matplotlib for faster, more memory-efficient plotting.
 
@@ -608,7 +656,7 @@ def plot_sp_rated_pgplot(groups, ylow=0, yhigh=100, xlow=0, xhigh=120):
         cand_symbols = []
         dm = []
         time = []
-        if grp.rank not in RANKS_TO_PLOT:
+        if grp.rank not in ranks:
             continue
         if grp.min_dm < yhigh and grp.max_dm > ylow:
             ppgplot.pgsci(rank_to_color[grp.rank])
@@ -673,20 +721,41 @@ def rank_occur(groups):
 
 #@profile
 def main():
+    parser = optparse.OptionParser(prog="Group_sp_events.py", \
+                         version="Chen Karako, updated by Chitrang Patel(June 23, 2015)",\
+                         usage="%prog args inf files(produced by prepsubband) singlepulse files",\
+                         description="Group single pulse events and rank them based \
+                                      on the sigma behavior. Plot DM vs time with \
+                                      different colours for different ranks.")
+    parser.add_option('--rank', dest='min_ranktoplot', type = 'int',\
+                       help="Only groups with rank upto this will plotted.(default: plot \
+                       all except rank 1)", default=0)
+    parser.add_option('-o', dest='outbasenm', type = 'string',\
+                       help="outfile base name. .groups.txt will be added to the given name."\
+                       , default='')
+    parser.add_option('--DM', dest='MAX_DMRANGE', type = 'float',\
+                       help="DM range above which a group is considered RFI.(Default = 300.0)\
+                       ", default=300.0)
+    options, args = parser.parse_args()
+
+    RANKS_TO_PLOT = [2,0,3,4,7,5,6]
+    ranks = ranks_to_plot(RANKS_TO_PLOT, options.min_ranktoplot)
+    print ranks
     print_debug("Beginning read_sp_files... "+strftime("%Y-%m-%d %H:%M:%S"))
-    singlepulses = read_sp_files()[0]
+    #singlepulses = read_sp_files(args[1:])[0]
+    groups = read_sp_files(args[1:])[0]
     print_debug("Finished read_sp_files, beginning create_groups... " +
                 strftime("%Y-%m-%d %H:%M:%S"))
-    print_debug("Number of single pulse events: %d " % len(singlepulses))
-    groups = create_groups(singlepulses, min_nearby=1, ignore_obs_end=10) # ignore the last 10 seconds of the obs, for palfa
+    print_debug("Number of single pulse events: %d " % len(groups))
+    groups = create_groups(groups, min_nearby=1, ignore_obs_end=10) # ignore the last 10 seconds of the obs, for palfa
     print_debug("Number of groups: %d " % len(groups))
     print_debug("Finished create_groups, beginning grouping_sp_dmt... " +
-                strftime("%Y-%m-%d %H:%M:%S"))
+                    strftime("%Y-%m-%d %H:%M:%S"))
     grouping_sp_dmt(groups)
     print_debug("Number of groups (after initial grouping): %d " % len(groups))
     print_debug("Finished grouping_sp_dmt, beginning flag_noise... " + 
                 strftime("%Y-%m-%d %H:%M:%S"))
-    flag_noise(groups, 10) # do an initial coarse noise flagging and removal
+    flag_noise(groups) # do an initial coarse noise flagging and removal
     pop_by_rank(groups, 1)
     print_debug("Number of groups (after removed noise gps w <10 sps): %d " % len(groups))
     print_debug("Beginning grouping_sp_t... " +
@@ -696,7 +765,7 @@ def main():
     print_debug("Finished grouping_sp_t. " + strftime("%Y-%m-%d %H:%M:%S"))
     # Flag RFI groups, noise
     flag_rfi(groups)
-    # Rank groups and identify noise (<50 sp events) groups
+    # Rank groups and identify noise (<45/40/35/30 sp events) groups
     print_debug("Ranking groups...")
     rank_groups(groups)
     # Remove noise groups
@@ -717,14 +786,14 @@ def main():
     # Remove groups that are likely RFI, based on their large span in DM
     if CHECKDMSPAN:
         print_debug("Beginning DM span check...")
-        check_dmspan(groups)
+        check_dmspan(groups, options.MAX_DMRANGE)
     else:
         print_debug("Skipping DM span check.")
     print_debug("Finished DM span check, beginning writing to outfile... " + 
                 strftime("%Y-%m-%d %H:%M:%S"))
 
-    outfile = open('groups.txt', 'w')
-    summaryfile = open('spsummary.txt', 'w')
+    outfile = open(options.outbasenm+'groups.txt', 'w')
+    summaryfile = open(options.outbasenm+'spsummary.txt', 'w')
     
     rank_dict = rank_occur(groups)
     for rank in sorted(ALL_RANKS_ORDERED):
@@ -760,27 +829,27 @@ def main():
         # DMs 0-30, 20-110, 100-300, 300-1000 
         if PLOTTYPE.lower() == 'pgplot':
             # Use PGPLOT to plot
-            plot_sp_rated_pgplot(groups, 0, 30)
+            plot_sp_rated_pgplot(groups, ranks, 0, 30)
             print_debug("Finished PGplotting DMs0-30 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, 20, 110)
+            plot_sp_rated_pgplot(groups, ranks, 20, 110)
             print_debug("Finished PGplotting DMs20-110 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, 100, 310)
+            plot_sp_rated_pgplot(groups, ranks, 100, 310)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, 300, 1000)
+            plot_sp_rated_pgplot(groups, ranks, 300, 1000)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, 1000, 10000)
+            plot_sp_rated_pgplot(groups, ranks, 1000, 10000)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
         elif PLOTTYPE.lower() == 'matplotlib':
             # Use matplotlib to plot
-            plot_sp_rated_all(groups, 0, 30)
+            plot_sp_rated_all(groups, ranks, 0, 30)
             print_debug("Finished plotting DMs0-30 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, 20, 110)
+            plot_sp_rated_all(groups, ranks, 20, 110)
             print_debug("Finished plotting DMs20-110 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, 100, 310)
+            plot_sp_rated_all(groups, ranks, 100, 310)
             print_debug("Finished plotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, 300, 1000)
+            plot_sp_rated_all(groups, ranks, 300, 1000)
             print_debug("Finished plotting DMs300-1000 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, 1000, 10000)
+            plot_sp_rated_all(groups, ranks, 1000, 10000)
             print_debug("Finished plotting DMs1000-10000 "+strftime("%Y-%m-%d %H:%M:%S"))
         else:
             print "Plot type must be one of 'matplotlib' or 'pgplot'. Not plotting."
