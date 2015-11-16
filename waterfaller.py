@@ -4,7 +4,7 @@
 waterfaller.py
 
 Make waterfall plots to show frequency sweep of a single pulse.
-Reads SIGPROC filterbank format.
+Reads psrfits and SIGPROC filterbank format.
 
 Patrick Lazarus - Aug. 19, 2011
 
