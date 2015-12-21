@@ -43,6 +43,7 @@ PLOTTYPE = 'pgplot' # 'pgplot' or 'matplotlib'
 CHECKDMSPAN = True # set whether or not to check if the DM span is larger than MAX_DMRANGE
 ALL_RANKS_ORDERED = [1,2,0,3,4,7,5,6]
 RANKS_TO_WRITE = [2,0,3,4,7,5,6]
+
 def ranks_to_plot(RANKS_TO_PLOT, min_rank):
     for i in range(min_rank):
         if i in RANKS_TO_PLOT:
@@ -52,6 +53,7 @@ def dmthreshold(dm):
     """ Sets the factor which multiplies the DMthreshold and time_threshold. The factor is basically the downsampling rate. 
         This makes the DM_THRESH and TIME_THRESH depend on the DM instead of having fixed values throughout. This helps at 
         higher DMs where the DM step size is > 0.5 pc cm-3. 
+        This is specific to PALFA.
     """
     if (dm <=212.8):
         dmt = 1
@@ -190,7 +192,7 @@ class SinglePulseGroup(object): # Greg's modification
              "\tRank:             %f" % self.rank]
         return '\n'.join(s)
 
-def create_groups(sps, min_nearby=1, time_thresh=TIME_THRESH, \
+def create_groups(sps, inffile, min_nearby=1, time_thresh=TIME_THRESH, \
                     dm_thresh=DM_THRESH, ignore_obs_end=0):
     """Given a recarray of singlepulses return a list of
         SinglePulseGroup objects.
@@ -212,7 +214,7 @@ def create_groups(sps, min_nearby=1, time_thresh=TIME_THRESH, \
             groups: A list of SinglePulseGroup objects.
     """
 
-    Tobs = get_obs_info()['T'] # duration of observation
+    Tobs = get_obs_info(inffile)['T'] # duration of observation
     if not (0 <= ignore_obs_end < Tobs):
         print "Invalid ignore_obs_end value. Value must be: \
             0 <= ignore_obs_end < Tobs. Setting ignore_obs_end to 0."
@@ -348,6 +350,7 @@ def flag_noise(groups, min_group=MIN_GROUP):
     for grp in groups:
         dmt = dmthreshold(grp.min_dm)
         # Decides the min group size on the downsampling rate which depends on the min DM of the group. At higher DMs the min group size needed is smaller.
+        # This is specific to PALFA
         if (dmt == 1):
             min_group = 45
         elif (dmt == 2):
@@ -398,6 +401,7 @@ def rank_groups(groups, min_group = MIN_GROUP):
     for grp in groups:
         dmt = dmthreshold(grp.min_dm)
         # Decides the min group size on the downsampling rate which depends on the min DM of the group. At higher DMs the min group size needed is smaller.
+        # This is specific to PALFA 
         if (dmt == 1):
             min_group = 45
         elif (dmt == 2):
@@ -513,14 +517,14 @@ def theoritical_dmspan(maxsigma, minsigma, width_ms, band_MHz = (1214., 1537.)):
     ind = (np.abs(sigma_range-sigma_limit)).argmin()
     return 2*ddm[ind]
 
-def check_dmspan(groups, MAX_DMRANGE):
+def check_dmspan(groups, MAX_DMRANGE, dt):
     """Read in groups and check whether each group's DM span exceeds the threshold.
     """
     for grp in groups:
         for sp in grp.singlepulses:
             if sp[1] == grp.max_sigma:
-                downsamp = (sp[2]/6.54761904761905e-05)/sp[3]
-                width_ms = 1000.0*sp[4]*6.54761904761905e-05*downsamp
+                downsamp = (sp[2]/dt)/sp[3]
+                width_ms = 1000.0*sp[4]*dt*downsamp
                 break
         if (grp.max_dm-grp.min_dm > 5*theoritical_dmspan(grp.max_sigma, 5.0, width_ms)) or \
             (grp.max_dm-grp.min_dm > MAX_DMRANGE):
@@ -535,28 +539,22 @@ def check_dmspan(groups, MAX_DMRANGE):
                 grp.rank = 2 #group marked as RFI
 
 
-def get_obs_info():
+def get_obs_info(inffile):
     """Read in an .inf file to extract observation information.
         Return observation RA, Dec, duration, and source name.
     """
-    inffiles = glob.glob('*.inf')
-    if len(inffiles) == 0: # no inf files exist
-        print "No inf files available!"
-        return None
-    else:
-        inffile = inffiles[0] # take the first inf file in current dir
-        inf = infodata.infodata(inffile)
-        T = inf.dt * inf.N # total observation time (s)
-        RA = inf.RA
-        dec = inf.DEC
-        src = inf.object
-        MJD = inf.epoch
-        telescope = inf.telescope
-        freq = (inf.numchan/2-0.5)*inf.chan_width+inf.lofreq # center freq
-        return {'T': T, 'RA': RA, 'dec': dec, 'src': src, 'MJD': MJD, 'telescope': telescope, 'freq': freq}
+    inf = infodata.infodata(inffile)
+    T = inf.dt * inf.N # total observation time (s)
+    RA = inf.RA
+    dec = inf.DEC
+    src = inf.object
+    MJD = inf.epoch
+    telescope = inf.telescope
+    freq = (inf.numchan/2-0.5)*inf.chan_width+inf.lofreq # center freq
+    return {'T': T, 'RA': RA, 'dec': dec, 'src': src, 'MJD': MJD, 'telescope': telescope, 'freq': freq}
 
 
-def plot_sp_rated_all(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
+def plot_sp_rated_all(groups, ranks, inffile, ylow=0, yhigh=100, xlow=0, xhigh=120):
     """Take in dict of Single Pulse Group lists and 
         plot the DM vs. t for all, with the plotted 
         colour corresponding to group rank. 
@@ -587,8 +585,8 @@ def plot_sp_rated_all(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
     plt.ylabel('DM (pc cm$^{-3}$)')
     # if inf file exists, will override xlow and xhigh 
     # specified when function is called
-    if get_obs_info() is not None: # if inf files exist, can get obs info
-        obsinfo = get_obs_info()
+    if get_obs_info(inffile) is not None: # if inf files exist, can get obs info
+        obsinfo = get_obs_info(inffile)
         plt.title('Single Pulse Results for %s\nRA: %s Dec: %s' % 
                   (obsinfo['src'], obsinfo['RA'], obsinfo['dec']))
         xhigh = obsinfo['T'] # set xhigh to observation duration
@@ -599,7 +597,7 @@ def plot_sp_rated_all(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
     plt.savefig('grouped_sps_DMs%s-%s.png' % (ylow, yhigh), dpi=300)
 
 
-def plot_sp_rated_pgplot(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
+def plot_sp_rated_pgplot(groups, ranks, inffile, ylow=0, yhigh=100, xlow=0, xhigh=120):
     """Plot groups according to their ranks. Uses pgplot rather 
         than matplotlib for faster, more memory-efficient plotting.
 
@@ -615,8 +613,8 @@ def plot_sp_rated_pgplot(groups, ranks, ylow=0, yhigh=100, xlow=0, xhigh=120):
         Outputs:
             None; saves a colorized sp plot.
     """
-    if get_obs_info() is not None: # if inf files exist, can get obs info
-        obsinfo = get_obs_info()
+    if get_obs_info(inffile) is not None: # if inf files exist, can get obs info
+        obsinfo = get_obs_info(inffile)
         #plt.title('Single Pulse Results for %s\nRA: %s Dec: %s' % 
                   #(obsinfo['src'], obsinfo['RA'], obsinfo['dec']))
         xhigh = obsinfo['T'] # set xhigh to observation duration
@@ -740,6 +738,11 @@ def main():
 
     RANKS_TO_PLOT = [2,0,3,4,7,5,6]
     ranks = ranks_to_plot(RANKS_TO_PLOT, options.min_ranktoplot)
+
+    inffile = glob.glob('*.inf')[0] # Take the 1st .inf file in the current directory
+    if len(inffile) == 0: # no inf files exist in this directory
+        print "No inf files available in the current directory!"
+    inf = infodata.infodata(inffile)    
     print ranks
     print_debug("Beginning read_sp_files... "+strftime("%Y-%m-%d %H:%M:%S"))
     #singlepulses = read_sp_files(args[1:])[0]
@@ -747,7 +750,7 @@ def main():
     print_debug("Finished read_sp_files, beginning create_groups... " +
                 strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Number of single pulse events: %d " % len(groups))
-    groups = create_groups(groups, min_nearby=1, ignore_obs_end=10) # ignore the last 10 seconds of the obs, for palfa
+    groups = create_groups(groups, inffile, min_nearby=1, ignore_obs_end=10) # ignore the last 10 seconds of the obs, for palfa
     print_debug("Number of groups: %d " % len(groups))
     print_debug("Finished create_groups, beginning grouping_sp_dmt... " +
                     strftime("%Y-%m-%d %H:%M:%S"))
@@ -786,7 +789,7 @@ def main():
     # Remove groups that are likely RFI, based on their large span in DM
     if CHECKDMSPAN:
         print_debug("Beginning DM span check...")
-        check_dmspan(groups, options.MAX_DMRANGE)
+        check_dmspan(groups, options.MAX_DMRANGE, inf.dt)
     else:
         print_debug("Skipping DM span check.")
     print_debug("Finished DM span check, beginning writing to outfile... " + 
@@ -829,27 +832,27 @@ def main():
         # DMs 0-30, 20-110, 100-300, 300-1000 
         if PLOTTYPE.lower() == 'pgplot':
             # Use PGPLOT to plot
-            plot_sp_rated_pgplot(groups, ranks, 0, 30)
+            plot_sp_rated_pgplot(groups, ranks, inffile, 0, 30)
             print_debug("Finished PGplotting DMs0-30 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, ranks, 20, 110)
+            plot_sp_rated_pgplot(groups, ranks, inffile, 20, 110)
             print_debug("Finished PGplotting DMs20-110 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, ranks, 100, 310)
+            plot_sp_rated_pgplot(groups, ranks, inffile, 100, 310)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, ranks, 300, 1000)
+            plot_sp_rated_pgplot(groups, ranks, inffile, 300, 1000)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_pgplot(groups, ranks, 1000, 10000)
+            plot_sp_rated_pgplot(groups, ranks, inffile, 1000, 10000)
             print_debug("Finished PGplotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
         elif PLOTTYPE.lower() == 'matplotlib':
             # Use matplotlib to plot
-            plot_sp_rated_all(groups, ranks, 0, 30)
+            plot_sp_rated_all(groups, ranks, inffile, 0, 30)
             print_debug("Finished plotting DMs0-30 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, ranks, 20, 110)
+            plot_sp_rated_all(groups, ranks, inffile, 20, 110)
             print_debug("Finished plotting DMs20-110 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, ranks, 100, 310)
+            plot_sp_rated_all(groups, ranks, inffile, 100, 310)
             print_debug("Finished plotting DMs100-310 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, ranks, 300, 1000)
+            plot_sp_rated_all(groups, ranks, inffile, 300, 1000)
             print_debug("Finished plotting DMs300-1000 "+strftime("%Y-%m-%d %H:%M:%S"))
-            plot_sp_rated_all(groups, ranks, 1000, 10000)
+            plot_sp_rated_all(groups, ranks, inffile, 1000, 10000)
             print_debug("Finished plotting DMs1000-10000 "+strftime("%Y-%m-%d %H:%M:%S"))
         else:
             print "Plot type must be one of 'matplotlib' or 'pgplot'. Not plotting."

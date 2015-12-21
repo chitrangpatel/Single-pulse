@@ -18,6 +18,7 @@ import infodata
 from subprocess import Popen, PIPE
 
 import numpy as np
+import math as m
 import optparse
 import waterfaller
 import sp_utils
@@ -33,49 +34,6 @@ DEBUG = True
 def print_debug(msg):
     if DEBUG:
         print msg
-def get_textfile(txtfile):
-    """ Read in the groups.txt file.
-    Contains information about the DM, time, box car width, signal to noise, sample number and rank    of groups. 
-    """
-    return  np.loadtxt(txtfile,dtype = 'str',delimiter='\n')
-def group_info(rank, txtfile):
-    """
-    Extracts out relevant information from the groups.txt file as strings. 
-    """
-    files = get_textfile(txtfile)
-    lis=np.where(files == '\tRank:             %i.000000'%rank)[0]#Checks for this contidion and gives its indices where true.
-    # Extract the Max_ sigma value for the required parameters
-    parameters=[]
-    for i in range(len(lis)):
-        temp_list = files[lis[i]-1].split()
-        max_sigma = temp_list[2]
-        max_sigma = float(max_sigma)
-        max_sigma = '%.2f'%max_sigma
-        # Extract the number of pulses for this group
-        temp_list = files[lis[i]-6].split()
-        number_of_pulses = int(temp_list[2])
-        # Slice off a mini array to get the parameters from
-        temp_lines = files[(lis[i]+1):(lis[i]+number_of_pulses+1)]
-        # Get the parameters as strings containing the max_sigma
-        parameters.append(temp_lines[np.array([max_sigma in line for line in temp_lines])])
-    return parameters 
-def split_parameters(rank, txtfile):
-    """
-    Splits the string into individual parameters and converts them into floats/int. 
-    """
-    parameters = group_info(rank, txtfile)
-    final_parameters=[]
-    for i in range(len(parameters)):
-    # If there is a degeneracy in max_sigma values, Picks the first one.(Can be updated to get the best pick) 
-        correct_values = parameters[i][0].split()
-        correct_values[0] = float(correct_values[0])
-        correct_values[1] = float(correct_values[1])
-        correct_values[1] = float('%.2f'%correct_values[1])
-        correct_values[2] = float(correct_values[2])
-        correct_values[3] = int(correct_values[3])
-        correct_values[4] = int(correct_values[4])
-        final_parameters.append(correct_values)
-    return final_parameters
 
 def topo_timeshift(bary_start_time, time_shift, topo):
     ind = np.where(topo == float(int(bary_start_time)/10*10))[0]
@@ -99,6 +57,7 @@ def maskdata(data, start_bin, nbinsextra, maskfile):
         # Mask data
         data = data.masked(mask, maskval='median-mid80')
     return data
+
 def waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, integrate_dm, downsamp, scaleindep, width_bins, rawdatafile, binratio, dat):
     """
     Runs the waterfaller. If dedispersing, there will be extra bins added to the 2D plot.
@@ -119,13 +78,14 @@ def waterfall_array(start_bin, dmfac, duration, nbins, zerodm, nsub, subdm, dm, 
     array = array[..., :nbinlim]
     array = (array[::-1]).astype(np.float16)
     return data, array
+
 def main():
     parser = optparse.OptionParser(prog="sp_pipeline..py", \
                         version=" Chitrang Patel (May. 12, 2015)", \
                         usage="%prog INFILE(PsrFits FILE, SINGLEPULSE FILES)", \
                         description="Create single pulse plots to show the " \
                                     "frequency sweeps of a single pulse,  " \
-                    "DM vs time, and SNR vs DM,"\
+                                    "DM vs time, and SNR vs DM,"\
                                     "in psrFits data.")
     parser.add_option('--infile', dest='infile', type='string', \
                         help="Give a .inf file to read the appropriate header information.")
@@ -143,9 +103,8 @@ def main():
     if not hasattr(options, 'txtfile'):
         raise ValueError("The groups.txt file must be given on the command line! ") 
     
-    files = get_textfile(options.txtfile)
+    files = sp_utils.spio.get_textfile(options.txtfile)
     print_debug("Begining waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
-    Detrendlen = 50
     if not args[0].endswith("fits"):
         raise ValueError("The first file must be a psrFits file! ") 
     print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
@@ -173,7 +132,7 @@ def main():
         rank = group+1
         if files[group] != "Number of rank %i groups: 0 "%rank:
             print_debug(files[group])
-            values = split_parameters(rank, options.txtfile)
+            values = sp_utils.spio.split_parameters(rank, options.txtfile)
             lis = np.where(files == '\tRank:             %i.000000'%rank)[0]
             for ii in range(len(values)):
                 #### Array for Plotting DM vs SNR
@@ -209,13 +168,13 @@ def main():
                 binratio = 50
                 scaleindep = False
                 zerodm = None
-                downsamp = np.round((values[ii][2]/sample_number/6.54761904761905e-05)).astype('int')
+                downsamp = np.round((values[ii][2]/sample_number/rawdatafile.tsamp)).astype('int')
                 duration = binratio * width_bins * rawdatafile.tsamp * downsamp
                 start = topo_start_time - (0.25 * duration)
                 if (start<0.0):
                     start = 0.0
-                pulse_width = width_bins*downsamp*6.54761904761905e-05
-                if sigma <= 10:
+                pulse_width = width_bins*downsamp*rawdatafile.tsamp
+                if sigma < 10:
                     nsub = 32
                 elif sigma >= 10 and sigma < 15:
                     nsub = 64

@@ -105,7 +105,6 @@ def main():
 
     # Read data
     start_bin = np.round(options.start/rawdatafile.tsamp).astype('int')
-	#dmfac = 4.15e3 * np.abs(1./rawdatafile.fch1**2 - 1./(rawdatafile.frequencies[-1])**2)
     dmfac = 4.15e3 * np.abs(1./rawdatafile.frequencies[0]**2 - 1./rawdatafile.frequencies[-1]**2)
     if options.nbins is None:
         nbins = np.round(options.duration/rawdatafile.tsamp).astype('int')

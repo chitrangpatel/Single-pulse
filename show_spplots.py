@@ -212,7 +212,7 @@ def main():
     parser.add_option("-o", dest= "outfile", type = "string", default = "spdplot", help= "give a base name to the saved plot. DM, time and rank values will be added automatically" )
     (options, args) = parser.parse_args()
     if len(args) == 0:
-        print "need .spd file and .singlepulse files in that order."
+        print "need a .spd file and .singlepulse files in that order."
         sys.exit()
     if not args[0].endswith(".spd"):
         print "the first file must be a .spd file"
