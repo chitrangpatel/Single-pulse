@@ -252,9 +252,6 @@ def create_groups(sps, inffile, min_nearby=1, time_thresh=TIME_THRESH, \
             # At least min_nearby nearby SP events
             grp = SinglePulseGroup(*sps[ii])
             groups.append(grp)
-        if ii==10000:
-            print ii
-            break
     return groups
 
 

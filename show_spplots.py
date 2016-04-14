@@ -191,7 +191,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, tar):
     dm_list = map(np.float32, npzfile['dm_list'])
     time_list = map(np.float32, npzfile['time_list'])
     if len(spfiles) > 2:
-        dms, times, sigmas, filelist = sp_utils.spio.gen_arrays(dm_arr, threshold, spfiles, tar)
+        dms, times, sigmas, filelist = sp_utils.spio.gen_arrays(dm_arr, spfiles, tar, threshold)
         sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time, xwin)
     else:
         print "You need a .singlepulse.tgz file to plot DM vs Time plot."
