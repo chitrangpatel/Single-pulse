@@ -21,8 +21,6 @@ import numpy as np
 import psr_utils
 import rfifind
 
-from sp_pulsar.formats import psrfits
-from pypulsar.formats import filterbank
 from sp_pulsar.formats import spectra
 
 SWEEP_STYLES = ['r-', 'b-', 'g-', 'm-', 'c-']
@@ -93,10 +91,12 @@ def main():
     if fn.endswith(".fil"):
         # Filterbank file
         filetype = "filterbank"
+        from pypulsar.formats import filterbank
         rawdatafile = filterbank.filterbank(fn)
     elif fn.endswith(".fits"):
         # PSRFITS file
         filetype = "psrfits"
+        from sp_pulsar.formats import psrfits
         rawdatafile = psrfits.PsrfitsFile(fn)
     else:
         raise ValueError("Cannot recognize data file type from "

@@ -26,7 +26,6 @@ from Pgplot import *
 from scipy.special import erf
 import optparse
 import sys
-import memory
 #h = hpy()
 #h.setref()
 CLOSE_DM = 2 # pc cm-3
