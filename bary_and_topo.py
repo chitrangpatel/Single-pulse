@@ -44,6 +44,7 @@ def bary_to_topo(infofilenm, ephem="DE200"):
    elif (obs.telescope == 'Effelsberg'):  tel = 'EB'
    elif (obs.telescope == 'Arecibo'):  tel = 'AO'
    elif (obs.telescope == 'MMT'):  tel = 'MT'
+   elif (obs.telescope == 'GBT'):  tel = 'GB'
    else:
       print "Telescope not recognized."
       return 0
