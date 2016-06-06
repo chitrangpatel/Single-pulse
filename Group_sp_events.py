@@ -40,8 +40,10 @@ DEBUG = True # if True, will be verbose
 PLOT = True
 PLOTTYPE = 'pgplot' # 'pgplot' or 'matplotlib'
 CHECKDMSPAN = True # set whether or not to check if the DM span is larger than MAX_DMRANGE
-ALL_RANKS_ORDERED = [1,2,0,3,4,7,5,6]
-RANKS_TO_WRITE = [2,0,3,4,7,5,6]
+#ALL_RANKS_ORDERED = [1,2,0,3,4,7,5,6]
+#RANKS_TO_WRITE = [2,0,3,4,7,5,6]
+ALL_RANKS_ORDERED = [1,2,0,3,4,5,6]
+RANKS_TO_WRITE = [2,0,3,4,5,6]
 
 def ranks_to_plot(RANKS_TO_PLOT, min_rank):
     for i in range(min_rank):
@@ -527,12 +529,12 @@ def check_dmspan(groups, MAX_DMRANGE, dt):
             # checks if the DM span is more than 5 times theoritical dm value.
             #print_debug("Group exceeds max allowed DM span. Initial rank: %s" % 
             #            grp.rank)
-            if (grp.rank == 5) or (grp.rank == 6): #if group is good or excellent
-                grp.rank = 7 # mark group as good but with an RFI-like DM span
+            if not ((grp.rank == 5) or (grp.rank == 6)): #if group is good or excellent
+                grp.rank = 2 # mark group as good but with an RFI-like DM span
                 #print_debug("Ranked a group as 7")
-            else:
+            #else:
                 #print_debug("large DM span, but not 5 or 6. Ranked 2")
-                grp.rank = 2 #group marked as RFI
+            #    grp.rank = 2 #group marked as RFI
 
 
 def get_obs_info(inffile):
@@ -556,7 +558,8 @@ def plot_sp_rated_all(groups, ranks, inffile, ylow=0, yhigh=100, xlow=0, xhigh=1
         colour corresponding to group rank. 
         The DM range to plot can also be specified.
     """
-    rank_to_color = {2:'r', 0:'k', 3:'g', 4:'b', 5:'m', 6:'c', 7:'y'}
+   # rank_to_color = {2:'r', 0:'k', 3:'g', 4:'b', 5:'m', 6:'c', 7:'y'}
+    rank_to_color = {2:'darkgrey', 0:'k', 3:'c', 4:'royalblue', 5:'b', 6:'m'}
 
     # Prepare data to plot
     dm = [] 
@@ -633,13 +636,13 @@ def plot_sp_rated_pgplot(groups, ranks, inffile, ylow=0, yhigh=100, xlow=0, xhig
     ppgplot.pgmtxt('T', 0.5, 0.2, 0.0, 'Telescope: %s  MJD: %s Freq: %.1f MHz'\
                     % (obsinfo['telescope'], obsinfo['MJD'], obsinfo['freq']))
     ppgplot.pgsch(0.8)
-    rank_to_color = {2:2, # red
+    rank_to_color = {2:15, # grey
                      0:1, # black
-                     3:3, # green
-                     4:4, # blue
-                     5:6, # magenta
-                     6:5, # cyan
-                     7:7} # yellow
+                     3:5, # cyan
+                     4:11, # dim blue
+                     5:4, # dark blue
+                     6:6} # magenta
+                     #7:7} # yellow
     
     # Plotting scheme taken from single_pulse_search.py
     # Circles are symbols 20-26 in increasing order
@@ -732,7 +735,8 @@ def main():
                        ", default=300.0)
     options, args = parser.parse_args()
 
-    RANKS_TO_PLOT = [2,0,3,4,7,5,6]
+    #RANKS_TO_PLOT = [2,0,3,4,7,5,6]
+    RANKS_TO_PLOT = [2,0,3,4,5,6]
     ranks = ranks_to_plot(RANKS_TO_PLOT, options.min_ranktoplot)
 
     inffile = glob.glob('*.inf')[0] # Take the 1st .inf file in the current directory
