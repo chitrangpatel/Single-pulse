@@ -180,10 +180,6 @@ def main():
                     nsub = 64
                 else:
                     nsub = 96
-                
-                if nsub > inf.numchan:
-                    nsub = inf.numchan
-
                 nbins = np.round(duration/rawdatafile.tsamp).astype('int')
                 start_bin = np.round(start/rawdatafile.tsamp).astype('int')
                 dmfac = 4.15e3 * np.abs(1./rawdatafile.frequencies[0]**2 - 1./rawdatafile.frequencies[-1]**2)
