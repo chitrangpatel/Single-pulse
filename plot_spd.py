@@ -214,23 +214,22 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
             sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time (s)")
             sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "DM (pc cm\u-3\d)")
     else:
-        sp_pgplot.ppgplot.pgpap(8, 10.0/7.0)
+        sp_pgplot.ppgplot.pgpap(10.25, 10.0/5.0)
         # Dedispersed waterfall plot - zerodm - OFF
         array = spdobj.data_nozerodm_dedisp.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
+        sp_pgplot.ppgplot.pgsvp(0.07, 0.60, 0.50, 0.80)
         sp_pgplot.ppgplot.pgswin(datastart - start, datastart -start+datanumspectra*datasamp, min_freq, max_freq)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCNST", 0, 0)
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
-        sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - Off")
         sp_pgplot.plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp], rangey = [min_freq, max_freq], image = 'apjgrey')
          
         #### Plot Dedispersed Time series - Zerodm filter - Off
         Dedisp_ts = array[::-1].sum(axis = 0)
         times = np.arange(datanumspectra)*datasamp
-        sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
+        sp_pgplot.ppgplot.pgsvp(0.07, 0.60, 0.80, 0.90)
         sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
@@ -253,17 +252,24 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
         on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
         Dedisp_spec = on_spec.sum(axis=1)[::-1]
         freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
+        sp_pgplot.ppgplot.pgsvp(0.6, 0.8, 0.50, 0.80)
+        sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
+        sp_pgplot.ppgplot.pgsch(0.8)
+        sp_pgplot.ppgplot.pgslw(3)
+        sp_pgplot.ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
+        sp_pgplot.ppgplot.pgsci(1)
+        sp_pgplot.ppgplot.pgline(Dedisp_spec,freqs)
+        sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - Off")
         
         #Dedispersed waterfall plot - Zerodm ON
         array = spdobj.data_zerodm_dedisp.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.1, 0.40)
+        sp_pgplot.ppgplot.pgsvp(0.07, 0.60, 0.1, 0.40)
         sp_pgplot.ppgplot.pgswin(datastart-start , datastart-start+datanumspectra*datasamp, min_freq, max_freq)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgbox("BCNST", 0, 0, "BCNST", 0, 0)
         sp_pgplot.ppgplot.pgmtxt('B', 2.5, 0.5, 0.5, "Time - %.2f s"%datastart)
         sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Observing Frequency (MHz)")
-        sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - On")
         sp_pgplot.plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp],rangey = [min_freq, max_freq],image = 'apjgrey')
         
         #### Plot Spectrum - Zerodm filter - On
@@ -273,11 +279,19 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
         on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
         Dedisp_spec = on_spec.sum(axis=1)[::-1]
         freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
+        sp_pgplot.ppgplot.pgsvp(0.07, 0.60, 0.40, 0.50)
+        sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
+        sp_pgplot.ppgplot.pgsch(0.8)
+        sp_pgplot.ppgplot.pgslw(3)
+        sp_pgplot.ppgplot.pgbox("BC", 0, 0, "BC", 0, 0)
+        sp_pgplot.ppgplot.pgsci(1)
+        sp_pgplot.ppgplot.pgline(Dedisp_spec,freqs)
+        sp_pgplot.ppgplot.pgmtxt('R', 1.8, 0.5, 0.5, "Zero-dm filtering - On")
         
         #### Plot Dedispersed Time series - Zerodm filter - On
         dedisp_ts = array[::-1].sum(axis = 0)
         times = np.arange(datanumspectra)*datasamp
-        sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
+        sp_pgplot.ppgplot.pgsvp(0.6, 0.80, 0.10, 0.40)
         sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
@@ -293,7 +307,7 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
         
         # Sweeped waterfall plot Zerodm - OFF
         array = spdobj.data_nozerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
+        sp_pgplot.ppgplot.pgsvp(0.3, 0.60, 0.50, 0.70)
         sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(4)
@@ -311,7 +325,7 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
         
         # Sweeped waterfall plot Zerodm - ON
         array = spdobj.data_zerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
+        sp_pgplot.ppgplot.pgsvp(0.30, 0.60, 0.1, 0.3)
         sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(4)
@@ -325,6 +339,9 @@ def plot(spdfile, singlepulsefiles, just_waterfall, xwin, outfile, tar):
         sp_pgplot.ppgplot.pgsci(1)
         
         #### Figure texts 
+        sp_pgplot.ppgplot.pgsvp(0.8, 0.97, 0.5, 0.909)
+        sp_pgplot.ppgplot.pgsch(0.6)
+        sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgmtxt('T', -1.1, 0.01, 0.0, "RA: %s" %RA)
         sp_pgplot.ppgplot.pgmtxt('T', -2.6, 0.01, 0.0, "DEC: %s" %dec)
         sp_pgplot.ppgplot.pgmtxt('T', -4.1, 0.01, 0.0, "MJD: %f" %MJD)
