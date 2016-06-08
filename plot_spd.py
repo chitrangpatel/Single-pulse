@@ -11,7 +11,7 @@ import sp_utils
 import read_spd
 import matplotlib.pyplot as plt
 
-def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spec, integrate_ts, tar):
+def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spec, integrate_ts, disp_pulse, tar):
     if not spdfile.endswith(".spd"):
 	    raise ValueError("The first file must be a .spd file")
     #npzfile = np.load(spdfile)
@@ -56,10 +56,17 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         sp_pgplot.ppgplot.pgopen(pgplot_device)
     else:
         if (outfile == "spdplot"): # default filename
-            sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+            if rank:
+                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+            else:
+                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
         else:
-            sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
+            if rank:
+                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+            else:
+                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
     if (just_waterfall == False):
+        print just_waterfall
         sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
         # Dedispersed waterfall plot - zerodm - OFF
         array = spdobj.data_nozerodm_dedisp.astype(np.float64)
@@ -165,38 +172,39 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgmtxt('T', 1.8, 0.5, 0.5, "Spectrum")
             sp_pgplot.ppgplot.pgsch(0.8)
         
-        # Sweeped waterfall plot Zerodm - OFF
-        array = spdobj.data_nozerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
-        sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
-        sp_pgplot.ppgplot.pgsch(0.8)
-        sp_pgplot.ppgplot.pgslw(4)
-        sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-        sp_pgplot.ppgplot.pgsch(3)
-        sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
-        delays = spdobj.dmsweep_delays
-        freqs = spdobj.dmsweep_freqs
-        sp_pgplot.ppgplot.pgslw(5)
-        sweepstart = sweeped_start- 0.2*sweep_duration
-        sp_pgplot.ppgplot.pgsci(0)
-        sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
-        sp_pgplot.ppgplot.pgsci(1)
-        sp_pgplot.ppgplot.pgslw(3)
-        
-        # Sweeped waterfall plot Zerodm - ON
-        array = spdobj.data_zerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
-        sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
-        sp_pgplot.ppgplot.pgsch(0.8)
-        sp_pgplot.ppgplot.pgslw(4)
-        sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-        sp_pgplot.ppgplot.pgsch(3)
-        sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
-        sp_pgplot.ppgplot.pgslw(5)
-        sweepstart = sweeped_start- 0.2*sweep_duration
-        sp_pgplot.ppgplot.pgsci(0)
-        sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
-        sp_pgplot.ppgplot.pgsci(1)
+        if disp_pulse:
+            # Sweeped waterfall plot Zerodm - OFF
+            array = spdobj.data_nozerodm.astype(np.float64)
+            sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.50, 0.70)
+            sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
+            sp_pgplot.ppgplot.pgsch(0.8)
+            sp_pgplot.ppgplot.pgslw(4)
+            sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+            sp_pgplot.ppgplot.pgsch(3)
+            sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
+            delays = spdobj.dmsweep_delays
+            freqs = spdobj.dmsweep_freqs
+            sp_pgplot.ppgplot.pgslw(5)
+            sweepstart = sweeped_start- 0.2*sweep_duration
+            sp_pgplot.ppgplot.pgsci(0)
+            sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
+            sp_pgplot.ppgplot.pgsci(1)
+            sp_pgplot.ppgplot.pgslw(3)
+            
+            # Sweeped waterfall plot Zerodm - ON
+            array = spdobj.data_zerodm.astype(np.float64)
+            sp_pgplot.ppgplot.pgsvp(0.20, 0.40, 0.1, 0.3)
+            sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
+            sp_pgplot.ppgplot.pgsch(0.8)
+            sp_pgplot.ppgplot.pgslw(4)
+            sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+            sp_pgplot.ppgplot.pgsch(3)
+            sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
+            sp_pgplot.ppgplot.pgslw(5)
+            sweepstart = sweeped_start- 0.2*sweep_duration
+            sp_pgplot.ppgplot.pgsci(0)
+            sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
+            sp_pgplot.ppgplot.pgsci(1)
         
         #### Figure texts 
         if integrate_spec:
@@ -380,39 +388,39 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgsch(0.7)
             sp_pgplot.ppgplot.pgmtxt('T', 1.8, 0.5, 0.5, "Spectrum")
             sp_pgplot.ppgplot.pgsch(0.8)
-        
-        # Sweeped waterfall plot Zerodm - OFF
-        array = spdobj.data_nozerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.3, 0.70, 0.44, 0.65)
-        sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
-        sp_pgplot.ppgplot.pgsch(0.8)
-        sp_pgplot.ppgplot.pgslw(4)
-        sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-        sp_pgplot.ppgplot.pgsch(3)
-        sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
-        delays = spdobj.dmsweep_delays
-        freqs = spdobj.dmsweep_freqs
-        sp_pgplot.ppgplot.pgslw(5)
-        sweepstart = sweeped_start- 0.2*sweep_duration
-        sp_pgplot.ppgplot.pgsci(0)
-        sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
-        sp_pgplot.ppgplot.pgsci(1)
-        sp_pgplot.ppgplot.pgslw(3)
-        
-        # Sweeped waterfall plot Zerodm - ON
-        array = spdobj.data_zerodm.astype(np.float64)
-        sp_pgplot.ppgplot.pgsvp(0.3, 0.70, 0.05, 0.25)
-        sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
-        sp_pgplot.ppgplot.pgsch(0.8)
-        sp_pgplot.ppgplot.pgslw(4)
-        sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
-        sp_pgplot.ppgplot.pgsch(3)
-        sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
-        sp_pgplot.ppgplot.pgslw(5)
-        sweepstart = sweeped_start- 0.2*sweep_duration
-        sp_pgplot.ppgplot.pgsci(0)
-        sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
-        sp_pgplot.ppgplot.pgsci(1)
+        if disp_pulse: 
+            # Sweeped waterfall plot Zerodm - OFF
+            array = spdobj.data_nozerodm.astype(np.float64)
+            sp_pgplot.ppgplot.pgsvp(0.3, 0.70, 0.44, 0.65)
+            sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
+            sp_pgplot.ppgplot.pgsch(0.8)
+            sp_pgplot.ppgplot.pgslw(4)
+            sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+            sp_pgplot.ppgplot.pgsch(3)
+            sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
+            delays = spdobj.dmsweep_delays
+            freqs = spdobj.dmsweep_freqs
+            sp_pgplot.ppgplot.pgslw(5)
+            sweepstart = sweeped_start- 0.2*sweep_duration
+            sp_pgplot.ppgplot.pgsci(0)
+            sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
+            sp_pgplot.ppgplot.pgsci(1)
+            sp_pgplot.ppgplot.pgslw(3)
+            
+            # Sweeped waterfall plot Zerodm - ON
+            array = spdobj.data_zerodm.astype(np.float64)
+            sp_pgplot.ppgplot.pgsvp(0.3, 0.70, 0.05, 0.25)
+            sp_pgplot.ppgplot.pgswin(sweeped_start, sweeped_start+sweep_duration, min_freq, max_freq)
+            sp_pgplot.ppgplot.pgsch(0.8)
+            sp_pgplot.ppgplot.pgslw(4)
+            sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCST", 0, 0)
+            sp_pgplot.ppgplot.pgsch(3)
+            sp_pgplot.plot_waterfall(array,rangex = [sweeped_start, sweeped_start+sweep_duration],rangey = [min_freq, max_freq],image = 'apjgrey')
+            sp_pgplot.ppgplot.pgslw(5)
+            sweepstart = sweeped_start- 0.2*sweep_duration
+            sp_pgplot.ppgplot.pgsci(0)
+            sp_pgplot.ppgplot.pgline(delays+sweepstart, freqs)
+            sp_pgplot.ppgplot.pgsci(1)
         
         #### Figure texts 
         sp_pgplot.ppgplot.pgsvp(0.05, 0.95, 0.8, 0.9)
@@ -450,6 +458,8 @@ def main():
                       default=False, help="Show spectrum.(Default: Show spectrum)")
     parser.add_option("--show-ts", action="store_true", dest="integrate_ts",
                       default=False, help="Show time series.(Default: Don't show time series)")
+    parser.add_option("--show-sweep", action="store_true", dest="disp_pulse",
+                      default=False, help="Show dispersed pulse.(Default: Don't show dispersed pulse)")
     (options, args) = parser.parse_args()
    
     if len(args) == 0:
@@ -462,11 +472,11 @@ def main():
         tar = tarfile.open(args[1], "r:gz")# read in the tarball
         filenames = tar.getnames()# get the filenames
         plot(args[0], filenames, options.xwin, options.outfile, options.just_waterfall, \
-             options.integrate_spec, options.integrate_ts, tar)# make the sp plots   
+             options.integrate_spec, options.integrate_ts, options.disp_pulse, tar)# make the sp plots   
         tar.close()
     else:
         plot(args[0], args[1:], options.xwin, options.outfile, options.just_waterfall, \
-             options.integrate_spec, options.integrate_ts, tar = None)# make the sp plots   
+             options.integrate_spec, options.integrate_ts, options.disp_pulse, tar = None)# make the sp plots   
 
 if __name__ == '__main__':
     main() 

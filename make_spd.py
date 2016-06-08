@@ -64,7 +64,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
                        inffile, txtfile, maskfile, \
                        min_rank, \
                        plot, just_waterfall, \
-                       integrate_ts, integrate_spec, \
+                       integrate_ts, integrate_spec, disp_pulse, \
                        maxnumcands, \
                        basename, \
                        mask=False, bandpass_corr=True, man_params=None):
@@ -173,7 +173,8 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                   xwin=False, outfile=basename, \
                                   just_waterfall=just_waterfall, \
                                   integrate_spec=integrate_spec, \
-                                  integrate_ts=integrate_ts, tar = None)
+                                  integrate_ts=integrate_ts, \
+                                  disp_pulse=disp_pulse, tar = None)
                     print_debug("Finished plot %i " %i+strftime("%Y-%m-%d %H:%M:%S"))
                 numcands+= 1
                 print_debug('Finished sp_candidate : %i'%numcands)
@@ -195,13 +196,14 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                              width_bins, nbins, downsamp, \
                              nsub, \
                              scaleindep, \
-                             integrate_ts, integrate_spec, \
+                             integrate_ts, integrate_spec, disp_pulse, \
                              basename, \
                              mask, bandpass_corr, man_params):            
     rank = None
     inf = infodata.infodata(inffile)
     if not nsub:
         nsub = inf.numchan
+    print nsub
     # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
     spdcand.manual_params(subdm, dm, sweep_dm, sigma, start_time, \
                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, inf.N, \
@@ -281,7 +283,7 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
         plot_spd.plot(temp_filename+".spd", args[1:], xwin=False, \
                       outfile = basename, just_waterfall=just_waterfall, \
                       integrate_spec=integrate_spec, integrate_ts=integrate_ts, \
-                      tar = None)
+                      disp_pulse=disp_pulse, tar = None)
 
 def main():
     fn = args[0]
@@ -305,13 +307,14 @@ def main():
     if options.outbasenm:
         basename=options.outbasenm
     spdcand = spcand.params()
+    print spdcand
     if not options.man_params:
         print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
         make_spd_from_file(spdcand, rawdatafile, \
                            options.infile, options.txtfile, options.maskfile, \
                            options.min_rank, \
                            options.plot, options.just_waterfall, \
-                           options.integrate_ts, options.integrate_spec, \
+                           options.integrate_ts, options.integrate_spec, options.disp_pulse, \
                            options.maxnumcands, \
                            basename, \
                            mask=options.mask, bandpass_corr=options.bandpass_corr)
@@ -326,7 +329,7 @@ def main():
                                  options.width_bins, options.nbins, options.downsamp, \
                                  options.nsub, \
                                  options.scaleindep, \
-                                 options.integrate_ts, options.integrate_spec, \
+                                 options.integrate_ts, options.integrate_spec, options.disp_pulse, \
                                  basename, \
                                  options.mask, options.bandpass_corr, options.man_params)            
 
@@ -376,6 +379,9 @@ if __name__=='__main__':
     parser.add_option('--show-spec', dest='integrate_spec', action='store_true', \
                         help="Plot the spectrum. " \
                                 "(Default: Do not show the spectrum)", default=False)
+    parser.add_option('--show-sweep', dest='disp_pulse', action='store_true', \
+                        help="Plot the inset dispersed pulse. " \
+                                "(Default: Do not show the dispersed pulse)", default=False)
     parser.add_option('--bandpass', dest='bandpass_corr', action='store_true', \
                         help="Correct for the bandpass. Requires an rfifind " \
                                 "mask provided by --mask option." \
