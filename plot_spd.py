@@ -48,6 +48,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
     sweep_duration = spdobj.sweep_duration
     sweeped_start = spdobj.sweep_start_time
     bary_start = spdobj.bary_pulse_peak_time
+    downsamp = datasamp/tsamp
     if xwin:
         pgplot_device = "/XWIN"
     else:
@@ -66,7 +67,6 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             else:
                 sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
     if (just_waterfall == False):
-        print just_waterfall
         sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
         # Dedispersed waterfall plot - zerodm - OFF
         array = spdobj.data_nozerodm_dedisp.astype(np.float64)
@@ -82,9 +82,9 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         sp_pgplot.plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp], rangey = [min_freq, max_freq], image = 'apjgrey')
         
          #### Plot Dedispersed Time series - Zerodm filter - Off
+        Dedisp_ts = array[::-1].sum(axis = 0)
+        times = np.arange(datanumspectra)*datasamp
         if integrate_ts: 
-            Dedisp_ts = array[::-1].sum(axis = 0)
-            times = np.arange(datanumspectra)*datasamp
             sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.80, 0.90)
             sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -103,13 +103,13 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - Off
+        spectrum_window = 0.05*duration
+        window_width = int(spectrum_window/datasamp)
+        burst_bin = datanumspectra/downsamp/4
+        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+        Dedisp_spec = on_spec.sum(axis=1)
+        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
-            spectrum_window = 0.05*duration
-            window_width = int(spectrum_window/datasamp)
-            burst_bin = datanumspectra/4
-            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-            Dedisp_spec = on_spec.sum(axis=1)[::-1]
-            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.4, 0.47, 0.5, 0.8)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -135,9 +135,9 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         array = spdobj.data_zerodm_dedisp.astype(np.float64)
         sp_pgplot.plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp],rangey = [min_freq, max_freq],image = 'apjgrey')
         #### Plot Dedispersed Time series - Zerodm filter - On
+        dedisp_ts = array[::-1].sum(axis = 0)
+        times = np.arange(datanumspectra)*datasamp
         if integrate_ts:
-            dedisp_ts = array[::-1].sum(axis = 0)
-            times = np.arange(datanumspectra)*datasamp
             sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.40, 0.50)
             sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -153,13 +153,13 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - On
+        spectrum_window = 0.05*duration
+        window_width = int(spectrum_window/datasamp)
+        burst_bin = datanumspectra/downsamp/4
+        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+        Dedisp_spec = on_spec.sum(axis=1)
+        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
-            spectrum_window = 0.05*duration
-            window_width = int(spectrum_window/datasamp)
-            burst_bin = datanumspectra/4
-            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-            Dedisp_spec = on_spec.sum(axis=1)[::-1]
-            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.4, 0.47, 0.1, 0.4)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -300,9 +300,9 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         sp_pgplot.plot_waterfall(array,rangex = [datastart-start, datastart-start+datanumspectra*datasamp], rangey = [min_freq, max_freq], image = 'apjgrey')
          
         #### Plot Dedispersed Time series - Zerodm filter - Off
+        Dedisp_ts = array[::-1].sum(axis = 0)
+        times = np.arange(datanumspectra)*datasamp
         if integrate_ts:
-            Dedisp_ts = array[::-1].sum(axis = 0)
-            times = np.arange(datanumspectra)*datasamp
             sp_pgplot.ppgplot.pgsvp(0.1, 0.70, 0.75, 0.83)
             sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(Dedisp_ts), 1.05*np.max(Dedisp_ts))
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -320,13 +320,13 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - Off
+        spectrum_window = 0.05*duration
+        window_width = int(spectrum_window/datasamp)
+        burst_bin = datanumspectra/downsamp/4
+        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+        Dedisp_spec = on_spec.sum(axis=1)
+        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
-            spectrum_window = 0.05*duration
-            window_width = int(spectrum_window/datasamp)
-            burst_bin = datanumspectra/4
-            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-            Dedisp_spec = on_spec.sum(axis=1)[::-1]
-            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.7, 0.9, 0.44, 0.75)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -352,9 +352,9 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         
         
         #### Plot Dedispersed Time series - Zerodm filter - On
+        dedisp_ts = array[::-1].sum(axis = 0)
+        times = np.arange(datanumspectra)*datasamp
         if integrate_ts:
-            dedisp_ts = array[::-1].sum(axis = 0)
-            times = np.arange(datanumspectra)*datasamp
             sp_pgplot.ppgplot.pgsvp(0.1, 0.7, 0.36, 0.44)
             sp_pgplot.ppgplot.pgswin(datastart - start, datastart-start+duration, np.min(dedisp_ts), 1.05*np.max(dedisp_ts))
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -370,13 +370,13 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - On
+        spectrum_window = 0.05*duration
+        window_width = int(spectrum_window/datasamp)
+        burst_bin = datanumspectra/downsamp/4
+        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+        Dedisp_spec = on_spec.sum(axis=1)
+        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
-            spectrum_window = 0.05*duration
-            window_width = int(spectrum_window/datasamp)
-            burst_bin = datanumspectra/4
-            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-            Dedisp_spec = on_spec.sum(axis=1)[::-1]
-            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.70, 0.90, 0.05, 0.36)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
