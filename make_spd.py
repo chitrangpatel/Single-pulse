@@ -21,7 +21,6 @@ import numpy as np
 import optparse
 import waterfaller
 import sp_utils
-import bary_and_topo
 import psr_utils
 import rfifind
 import plot_spd
@@ -74,7 +73,8 @@ def make_spd_from_file(spdcand, rawdatafile, \
     loop_must_break = False # dont break the loop unless num of cands >100.
     inf = infodata.infodata(inffile)
     files = sp_utils.spio.get_textfile(options.txtfile)
-    groups = [i for i in range(7) if(i>=min_rank)]
+    groups = [i for i in range(7) if(i>=min_rank)][::-1]
+    print groups
      
     for group in groups:
         rank = group+1
@@ -84,7 +84,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
             lis = np.where(files == '\tRank:             %i.000000'%rank)[0]
             for ii in range(len(values)):
                 #### Arrays for Plotting DM vs SNR
-                dm_list, time_list, dm_arr, sigma_arr, width_arr = sp_utils.spio.read_RRATrap_info(txtfile, lis, rank)
+                dm_list, time_list, dm_arr, sigma_arr, width_arr = sp_utils.spio.read_RRATrap_info(txtfile, lis[ii], rank)
 
 
                 # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
@@ -106,6 +106,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                              spdcand.scaleindep, spdcand.width_bins, \
                                              spdcand.mask, maskfile, spdcand.bandpass_corr)
 
+                Total_observed_time = inf.N*inf.dt
                 text_array = np.array([args[0], inf.telescope, inf.RA, inf.DEC, inf.epoch, \
                                        rank, spdcand.nsub, spdcand.nbins, spdcand.subdm, \
                                        spdcand.sigma, spdcand.sample_number, spdcand.duration, \
@@ -169,9 +170,11 @@ def make_spd_from_file(spdcand, rawdatafile, \
                 if plot:
                     print_debug("Now plotting...")
                     plot_spd.plot(temp_filename+".spd", args[1:], \
-                                  just_waterfall, xwin=False, \
-                                  outfile = basename, tar = None)
-                    print_debug("Finished plot %i " %j+strftime("%Y-%m-%d %H:%M:%S"))
+                                  xwin=False, outfile=basename, \
+                                  just_waterfall=just_waterfall, \
+                                  integrate_spec=integrate_spec, \
+                                  integrate_ts=integrate_ts, tar = None)
+                    print_debug("Finished plot %i " %i+strftime("%Y-%m-%d %H:%M:%S"))
                 numcands+= 1
                 print_debug('Finished sp_candidate : %i'%numcands)
                 if numcands >= maxnumcands:    # Max number of candidates to plot 100.
@@ -197,6 +200,9 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                              mask, bandpass_corr, man_params):            
     rank = None
     inf = infodata.infodata(inffile)
+    if not nsub:
+        nsub = inf.numchan
+    print nsub
     # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
     spdcand.manual_params(subdm, dm, sweep_dm, sigma, start_time, \
                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, inf.N, \
@@ -213,6 +219,7 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                                  spdcand.scaleindep, spdcand.width_bins, \
                                  spdcand.mask, maskfile, spdcand.bandpass_corr)
     # Add additional information to the header information array
+    Total_observed_time = inf.N*inf.dt
     text_array = np.array([args[0], inf.telescope, inf.RA, inf.DEC, inf.epoch, rank, \
                            spdcand.nsub, spdcand.nbins, \
                            spdcand.subdm, spdcand.sigma, spdcand.sample_number, \
@@ -235,6 +242,7 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                           rawdatafile.frequencies[0], rawdatafile.frequencies[-1], inffile, \
                           dedisp=None, scaleindep=None, zerodm=None, mask=mask, \
                           bandpass_corr=bandpass_corr)
+    print spdcand.dm, spdcand.subdm, spdcand.sweep_dm
     data, Data_nozerodm = waterfall_array(rawdatafile, spdcand.start, \
                                  spdcand.duration, spdcand.dm, spdcand.nbins, spdcand.nsub, \
                                  spdcand.subdm, spdcand.zerodm, spdcand.downsamp, \
@@ -271,8 +279,10 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
     #### Arrays for Plotting DM vs Time is in plot_spd.plot(...)
     if plot:
         print_debug("Now plotting...")
-        plot_spd.plot(temp_filename+".spd", args[1:], just_waterfall, \
-        xwin=False, outfile = basename, tar = None)
+        plot_spd.plot(temp_filename+".spd", args[1:], xwin=False, \
+                      outfile = basename, just_waterfall=just_waterfall, \
+                      integrate_spec=integrate_spec, integrate_ts=integrate_ts, \
+                      tar = None)
 
 def main():
     fn = args[0]
@@ -293,7 +303,10 @@ def main():
                          "extension. (Only '.fits' and '.fil' "
                          "are supported.)")
 
-    spdcand = spcand.params
+    if options.outbasenm:
+        basename=options.outbasenm
+    spdcand = spcand.params()
+    print spdcand
     if not options.man_params:
         print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
         make_spd_from_file(spdcand, rawdatafile, \
@@ -309,9 +322,9 @@ def main():
         make_spd_from_man_params(spdcand, rawdatafile, \
                                  options.infile, options.txtfile, options.maskfile, \
                                  options.plot, options.just_waterfall, \
-                                 options.subdm, options.dm, options.sweep_dm, \
+                                 options.subdm, options.dm, options.sweep_dms, \
                                  options.sigma, \
-                                 options.start_time, options.duration, \
+                                 options.start, options.duration, \
                                  options.width_bins, options.nbins, options.downsamp, \
                                  options.nsub, \
                                  options.scaleindep, \
@@ -359,9 +372,9 @@ if __name__=='__main__':
     parser.add_option('-d', '--dm', dest='dm', type='float', \
                         help="DM to use when dedispersing data for plot. " \
                                 "(Default: 0 pc/cm^3)", default=0.0)
-    parser.add_option('--dont-show-ts', dest='integrate_ts', action='store_false', \
-                        help="Do not plot the time series. " \
-                                "(Default: Show the time series)", default=True)
+    parser.add_option('--show-ts', dest='integrate_ts', action='store_true', \
+                        help="Plot the time series. " \
+                                "(Default: Dont show the time series)", default=False)
     parser.add_option('--show-spec', dest='integrate_spec', action='store_true', \
                         help="Plot the spectrum. " \
                                 "(Default: Do not show the spectrum)", default=False)
@@ -421,6 +434,9 @@ if __name__=='__main__':
                                 "and the .singlepulse files as input. No need to specify any of"\
                                 " the other arguments.)",\
                         default=False)
+    parser.add_option('-o', dest='outbasenm', type='string', \
+                        help="basename of the output spd file.", \
+                        default=None)
     parser.add_option('--noplot', dest='plot', action='store_false', \
                         help="Do not generate spd plots.", \
                         default=True)

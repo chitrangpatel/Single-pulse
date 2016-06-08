@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+from sp_utils import bary_and_topo
 
 def topo_timeshift(bary_start_time, time_shift, topo):
     ind = np.where(topo == float(int(bary_start_time)/10*10))[0]
@@ -141,7 +142,7 @@ class params:
             self.sweep_dm = None
             self.sweep_duration = 0.0
             self.dmfac = 4.15e3 * np.abs(1./lofreq**2 - 1./hifreq**2)
-            self.nbinsextra = nbins + np.round((self.dmfac * self.dm)/tsamp).astype('int')
+            self.nbinsextra = self.nbins + np.round((self.dmfac * self.dm)/tsamp).astype('int')
             if (self.start_bin+self.nbinsextra) > N-1:
                     self.nbinsextra = N-1-self.start_bin
             self.bandpass_corr = bandpass_corr
@@ -157,7 +158,7 @@ class params:
             self.nbinsextra = self.nbins
 
 
-            if (self.start_bin+self.nbinsextra) > Ni-1:
+            if (self.start_bin+self.nbinsextra) > N-1:
                 self.nbinsextra = N-1-self.start_bin
             self.bandpass_corr = False
                 

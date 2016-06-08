@@ -171,7 +171,6 @@ def dm_time_plot(dms, times, sigmas, dm_arr, sigma_arr, time_arr, Total_observed
     """
     min_dm = Num.min(dms)
     max_dm = Num.max(dms)
-    ppgplot.pgsvp(0.48, 0.97, 0.1, 0.54)
     ppgplot.pgswin(0, Total_observed_time, min_dm, max_dm)
     ppgplot.pgsch(0.8)
     ppgplot.pgslw(3)

@@ -29,12 +29,13 @@ FRACTIONAL_SIGMA = 0.9 # change to 0.8?
 ALL_RANKS_ORDERED = [1,2,0,3,4,5,6]
 DEBUG = True # if True, will be verbose
 
-def dmthreshold(dm, use_ddplan):
+def dmthreshold(dm, use_ddplan, min_group=45):
     if use_ddplan:
+        import Grouping_config
         dmt, min_group = Grouping_config.use_ddplan(dm)
     else:
         dmt = 1
-        min_group = 50 
+        min_group = min_group 
     return dmt, min_group
 
     
@@ -298,7 +299,7 @@ def grouping_sp_t(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
     return groups
 
 
-def flag_noise(groups, use_ddplan=False, min_group=50):
+def flag_noise(groups, use_ddplan=False, min_group=45):
     """Flag groups as noise based on group size.
         If the number of sp events in a group is < min_group,
         this group is marked as noise.
@@ -313,7 +314,8 @@ def flag_noise(groups, use_ddplan=False, min_group=50):
             None
     """
     for grp in groups:
-        min_group = dmthreshold(grp.min_dm, use_ddplan)[1]
+        min_group = dmthreshold(grp.min_dm, use_ddplan, min_group)[1]
+        print min_group
         if grp.numpulses < min_group:
             grp.rank = 1
     return groups
@@ -341,7 +343,7 @@ def flag_rfi(groups, close_dm = 2.0):
                     break
 
 
-def rank_groups(groups, use_ddplan=False, min_group=50, min_sigma=8.0):
+def rank_groups(groups, use_ddplan=False, min_group=45, min_sigma=8.0):
     """Rank groups based on their sigma vs. DM behaviour. 
         Takes as input list of Single Pulse Groups.
         The ranks of the groups are updated in-place.
@@ -354,7 +356,7 @@ def rank_groups(groups, use_ddplan=False, min_group=50, min_sigma=8.0):
     """
 #   divide groups into 5 parts (based on number events) to examine sigma behaviour
     for grp in groups:
-        min_group = dmthreshold(grp.min_dm, use_ddplan)[1]
+        min_group = dmthreshold(grp.min_dm, use_ddplan, min_group)[1]
         if len(grp.singlepulses) < min_group:
             grp.rank = 1
         elif grp.rank != 2: # don't overwrite ranks of rfi groups
@@ -679,14 +681,15 @@ def main():
                         "the DDplan.  (Default: do not use ddplan)", default=False)
     parser.add_option('--min-group', dest='min_group', type='int', \
                         help="minimum number of events in a group to no be considered noise." \
-                             "(Default: 50)", \
-                         default=50)
+                             "(Default: 45)", \
+                         default=45)
     parser.add_option('--dm-thresh', dest='dm_thresh', type='float', \
                         help="DM threshold to use for nearest neighbour. Suggest a value greater " \
-                              " than the DM step size(Default: 0.1 pc/cm^3)", default=0.1)
+                              " than the DM step size(Default: 0.5 pc/cm^3 - will not work if DM " \
+                              "step size is greater than 0.5)", default=0.5)
     parser.add_option('--time-thresh', dest='time_thresh', type='float', \
                         help="Time threshold to use for nearest neighbour. Suggest a value that " \
-                             " is a few times the max pulse width(Default: 0.5 s)", default=0.5)
+                             " is a few times the max pulse width(Default: 0.1 s)", default=0.1)
     parser.add_option('--min-sigma', dest='min_sigma', type='float', \
                         help="minimum signal-to-noise above which the group is highly considered" \
                         "to be astrophysical. (Default: 8.0)", \
@@ -723,7 +726,7 @@ def main():
 
     RANKS = np.asarray([2,0,3,4,5,6])
     
-    if use_configfile:
+    if options.use_configfile:
         CLOSE_DM = Grouping_config.CLOSE_DM
         MIN_GROUP = Grouping_config.MIN_GROUP
         TIME_THRESH = Grouping_config.TIME_THRESH
@@ -744,8 +747,8 @@ def main():
         RANKS_TO_WRITE = list(RANKS[RANKS>options.min_ranktowrite]) 
         RANKS_TO_PLOT = list(RANKS[RANKS>options.min_ranktoplot])
     
-    
-    inf = infodata.infodata(options.inffile)    
+    inffile = options.inffile
+    inf = infodata.infodata(inffile)    
     print_debug("Beginning read_sp_files... "+strftime("%Y-%m-%d %H:%M:%S"))
     
     groups = read_sp_files(args[1:])[0]
