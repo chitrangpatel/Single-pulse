@@ -202,7 +202,6 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
     inf = infodata.infodata(inffile)
     if not nsub:
         nsub = inf.numchan
-    print nsub
     # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
     spdcand.manual_params(subdm, dm, sweep_dm, sigma, start_time, \
                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, inf.N, \
@@ -306,7 +305,6 @@ def main():
     if options.outbasenm:
         basename=options.outbasenm
     spdcand = spcand.params()
-    print spdcand
     if not options.man_params:
         print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
         make_spd_from_file(spdcand, rawdatafile, \

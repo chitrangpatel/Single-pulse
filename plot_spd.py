@@ -60,7 +60,6 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         else:
             sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
     if (just_waterfall == False):
-        print just_waterfall
         sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
         # Dedispersed waterfall plot - zerodm - OFF
         array = spdobj.data_nozerodm_dedisp.astype(np.float64)
