@@ -1,33 +1,31 @@
 #!/usr/bin/env python
 
 """
-sp_pipeline.py
+make_spd.py
 
 Make single pulse plots which include the waterfall plots and dedispersed time series with Zero-DM On/Off.
 Also includes Signal-to-noise vs DM and DM vs Time subplots.
 Usage on the command line:
-./sp_pipeline.py --infile <any .inf file> --groupsfile <a groups.txt file> --mask <.rfifind.mask file> <psrfits file> <singlepulse files>
+python make_spd.py [OPTIONS] <psrfits file> <singlepulse files> 
 
-Chitrang Patel - May. 21, 2015
+Chitrang Patel - May. 21, 2015 -- Updated on June 10 2016
 """
 
 import sys
 import copy
 from time import strftime
-import infodata
 from subprocess import Popen, PIPE
 
 import numpy as np
 import optparse
 import waterfaller
-import sp_utils
 import psr_utils
-import rfifind
 import plot_spd
 import spcand
-
-from sp_pulsar.formats import psrfits
-from sp_pulsar.formats import spectra
+import spio
+import psrfits
+import spectra
+#import filterbank need to implement in PRESTO
 
 DEBUG = True
 def print_debug(msg):
@@ -61,35 +59,62 @@ def waterfall_array(rawdatafile, start, duration, dm, nbins, nsub, subdm, zerodm
     return data, array
 
 def make_spd_from_file(spdcand, rawdatafile, \
-                       inffile, txtfile, maskfile, \
-                       min_rank, \
+                       txtfile, maskfile, \
+                       min_rank, group_rank, \
                        plot, just_waterfall, \
                        integrate_ts, integrate_spec, disp_pulse, \
                        maxnumcands, \
                        basename, \
                        mask=False, bandpass_corr=True, man_params=None):
     
+    """
+    Makes spd files from output files of rratrap. 
+    Inputs:
+        spdcand: spcand parameters instance (read in spcand.params)
+        rawdatafile: psrfits file instance
+        txtfile: rratrap output file (groups.txt file)
+        maskfile: rfifind mask file. need this file if you want to remove the bandpass 
+                  or use rfifind mask information.
+        min_rank: plot all groups with rank more than this. min 1, max 6
+        group_rank: plot groups ranked whatever you specify
+        plot: do you want to produce the plots as well? 
+        just_waterfall: Do you just want to make the waterfall plots.
+        integrate_ts: Do you want to display the dedispersed time series in the plot?
+        integrate_spec: Do you want to display the pulse spectrum in the plot?
+        disp_pulse: Do you want to see the inset dispersed pulse in the plot?
+        maxnumcands: What is the maximum number of candidates you would like to generate?
+        basename: output basename of the file. Appended with _DM_TIME(s)_RANK.spd 
+    Optional arguments:
+        mask: Do you want to mask out rfi contaminated channels?
+        bandpass_corr: Do you want to remove the bandpass?
+        man_params: Do you want to specify the parameters for waterfalling 
+                    manually? If yes, I suggest using the function make_spd_from_man_params().
+                    (I suggest giving it the rratrap output file)    
+    Outputs:
+       Binary npz file containing the necessary arrays and header information to generate the spd plots.
+    """
     numcands=0 # counter for max number of candidates
     loop_must_break = False # dont break the loop unless num of cands >100.
-    inf = infodata.infodata(inffile)
-    files = sp_utils.spio.get_textfile(options.txtfile)
-    groups = [i for i in range(7) if(i>=min_rank)][::-1]
-    print groups
+    files = spio.get_textfile(options.txtfile)
+    if group_rank:
+        groups=[group_rank-1]
+    else:
+        groups = [i for i in range(6) if(i>=min_rank)][::-1]
      
     for group in groups:
         rank = group+1
         if files[group] != "Number of rank %i groups: 0 "%rank:
-            print_debug(files[group])
-            values = sp_utils.spio.split_parameters(rank, txtfile)
+            values = spio.split_parameters(rank, txtfile)
             lis = np.where(files == '\tRank:             %i.000000'%rank)[0]
             for ii in range(len(values)):
                 #### Arrays for Plotting DM vs SNR
-                dm_list, time_list, dm_arr, sigma_arr, width_arr = sp_utils.spio.read_RRATrap_info(txtfile, lis[ii], rank)
+                dm_list, time_list, dm_arr, sigma_arr, width_arr = spio.read_RRATrap_info(txtfile, lis[ii], rank)
 
 
                 # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
-                spdcand.read_from_file(values[ii], rawdatafile.tsamp, inf.N, rawdatafile.frequencies[0], \
-                                       rawdatafile.frequencies[-1], inffile, dedisp = True, \
+                spdcand.read_from_file(values[ii], rawdatafile.tsamp, rawdatafile.specinfo.N, \
+                                       rawdatafile.frequencies[0], rawdatafile.frequencies[-1], \
+                                       rawdatafile, dedisp = True, \
                                        scaleindep = None, zerodm = None, mask = mask, \
                                        bandpass_corr = bandpass_corr)
 
@@ -106,12 +131,13 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                              spdcand.scaleindep, spdcand.width_bins, \
                                              spdcand.mask, maskfile, spdcand.bandpass_corr)
 
-                Total_observed_time = inf.N*inf.dt
-                text_array = np.array([args[0], inf.telescope, inf.RA, inf.DEC, inf.epoch, \
+                text_array = np.array([args[0], rawdatafile.specinfo.telescope, \
+                                       rawdatafile.specinfo.ra_str, rawdatafile.specinfo.dec_str, \
+                                       rawdatafile.specinfo.start_MJD[0], \
                                        rank, spdcand.nsub, spdcand.nbins, spdcand.subdm, \
                                        spdcand.sigma, spdcand.sample_number, spdcand.duration, \
                                        spdcand.width_bins, spdcand.pulse_width, rawdatafile.tsamp,\
-                                       Total_observed_time, spdcand.topo_start_time, data.starttime, \
+                                       rawdatafile.specinfo.T, spdcand.topo_start_time, data.starttime, \
                                        data.dt,data.numspectra, data.freqs.min(), data.freqs.max()])
 
                 #### Array for plotting Dedispersed waterfall plot zerodm - ON
@@ -123,8 +149,9 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                            spdcand.scaleindep, spdcand.width_bins, \
                                            spdcand.mask, maskfile, spdcand.bandpass_corr)
                 ####Sweeped without zerodm
-                spdcand.read_from_file(values[ii], rawdatafile.tsamp, inf.N, rawdatafile.frequencies[0], \
-                                      rawdatafile.frequencies[-1], inffile, dedisp = None, \
+                spdcand.read_from_file(values[ii], rawdatafile.tsamp, rawdatafile.specinfo.N, \
+                                      rawdatafile.frequencies[0], rawdatafile.frequencies[-1], \
+                                      rawdatafile, dedisp = None, \
                                       scaleindep = None, zerodm = None, mask = mask, \
                                       bandpass_corr = bandpass_corr)
                 data, Data_nozerodm = waterfall_array(rawdatafile, spdcand.start, \
@@ -175,7 +202,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                   integrate_spec=integrate_spec, \
                                   integrate_ts=integrate_ts, \
                                   disp_pulse=disp_pulse, tar = None)
-                    print_debug("Finished plot %i " %i+strftime("%Y-%m-%d %H:%M:%S"))
+                    print_debug("Finished plot %i " %ii+strftime("%Y-%m-%d %H:%M:%S"))
                 numcands+= 1
                 print_debug('Finished sp_candidate : %i'%numcands)
                 if numcands >= maxnumcands:    # Max number of candidates to plot 100.
@@ -188,7 +215,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
     print_debug("Finished running waterfaller... "+strftime("%Y-%m-%d %H:%M:%S"))
         
 def make_spd_from_man_params(spdcand, rawdatafile, \
-                             inffile, txtfile, maskfile, \
+                             txtfile, maskfile, \
                              plot, just_waterfall, \
                              subdm, dm, sweep_dm, \
                              sigma, \
@@ -200,14 +227,14 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                              basename, \
                              mask, bandpass_corr, man_params):            
     rank = None
-    inf = infodata.infodata(inffile)
     if not nsub:
-        nsub = inf.numchan
-    print nsub
+        nsub = rawdatafile.nchan
+
     # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
     spdcand.manual_params(subdm, dm, sweep_dm, sigma, start_time, \
-                         width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, inf.N, \
-                         rawdatafile.frequencies[0], rawdatafile.frequencies[-1], inffile, \
+                         width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, \
+                         rawdatafile.specinfo.N, \
+                         rawdatafile.frequencies[0], rawdatafile.frequencies[-1], rawdatafile, \
                          dedisp=True, scaleindep=False, zerodm=False, \
                          mask=mask, bandpass_corr=bandpass_corr)
     #make an array to store header information for the spd files
@@ -220,12 +247,13 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                                  spdcand.scaleindep, spdcand.width_bins, \
                                  spdcand.mask, maskfile, spdcand.bandpass_corr)
     # Add additional information to the header information array
-    Total_observed_time = inf.N*inf.dt
-    text_array = np.array([args[0], inf.telescope, inf.RA, inf.DEC, inf.epoch, rank, \
+    text_array = np.array([args[0], rawdatafile.specinfo.telescope, \
+                           rawdatafile.specinfo.ra_str, rawdatafile.specinfo.dec_str, \
+                           rawdatafile.specinfo.start_MJD[0], rank, \
                            spdcand.nsub, spdcand.nbins, \
                            spdcand.subdm, spdcand.sigma, spdcand.sample_number, \
                            spdcand.duration, spdcand.width_bins, spdcand.pulse_width, \
-                           rawdatafile.tsamp, Total_observed_time, spdcand.topo_start_time, \
+                           rawdatafile.tsamp, rawdatafile.specinfo.T, spdcand.topo_start_time, \
                            data.starttime, data.dt,data.numspectra, data.freqs.min(), \
                            data.freqs.max()])
 
@@ -239,11 +267,11 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                                  spdcand.mask, maskfile, spdcand.bandpass_corr)
     ####Sweeped without zerodm
     spdcand.manual_params(subdm, dm, sweep_dm, sigma, start_time, \
-                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, inf.N, \
-                          rawdatafile.frequencies[0], rawdatafile.frequencies[-1], inffile, \
+                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, \
+                          rawdatafile.specinfo.N, \
+                          rawdatafile.frequencies[0], rawdatafile.frequencies[-1], rawdatafile, \
                           dedisp=None, scaleindep=None, zerodm=None, mask=mask, \
                           bandpass_corr=bandpass_corr)
-    print spdcand.dm, spdcand.subdm, spdcand.sweep_dm
     data, Data_nozerodm = waterfall_array(rawdatafile, spdcand.start, \
                                  spdcand.duration, spdcand.dm, spdcand.nbins, spdcand.nsub, \
                                  spdcand.subdm, spdcand.zerodm, spdcand.downsamp, \
@@ -307,12 +335,11 @@ def main():
     if options.outbasenm:
         basename=options.outbasenm
     spdcand = spcand.params()
-    print spdcand
     if not options.man_params:
         print_debug('Maximum number of candidates to plot: %i'%options.maxnumcands)
         make_spd_from_file(spdcand, rawdatafile, \
-                           options.infile, options.txtfile, options.maskfile, \
-                           options.min_rank, \
+                           options.txtfile, options.maskfile, \
+                           options.min_rank, options.group_rank, \
                            options.plot, options.just_waterfall, \
                            options.integrate_ts, options.integrate_spec, options.disp_pulse, \
                            options.maxnumcands, \
@@ -321,7 +348,7 @@ def main():
     else:
         print_debug("Making spd files based on mannual parameters. I suggest reading in parameters from the groups.txt file.")
         make_spd_from_man_params(spdcand, rawdatafile, \
-                                 options.infile, options.txtfile, options.maskfile, \
+                                 options.txtfile, options.maskfile, \
                                  options.plot, options.just_waterfall, \
                                  options.subdm, options.dm, options.sweep_dms, \
                                  options.sigma, \
@@ -341,8 +368,6 @@ if __name__=='__main__':
                                     "frequency sweeps of a single pulse,  " \
                                     "DM vs time, and SNR vs DM,"\
                                     "in psrFits data.")
-    parser.add_option('--infile', dest='infile', type='string', \
-                        help="Give a .inf file to read the appropriate header information.")
     parser.add_option('--groupsfile', dest='txtfile', type='string', \
                         help="Give the groups.txt file to read in the groups information.", \
                         default=None) 
@@ -359,16 +384,14 @@ if __name__=='__main__':
     parser.add_option('--subdm', dest='subdm', type='float', \
                         help="DM to use when subbanding. (Default: " \
                                 "same as --dm)", default=None)
-    parser.add_option('--zerodm', dest='zerodm', action='store_true', \
-                        help="If this flag is set - Turn Zerodm filter - ON  (Default: " \
-                                "OFF)", default=False)
     parser.add_option('-s', '--nsub', dest='nsub', type='int', \
                         help="Number of subbands to use. Must be a factor " \
                                 "of number of channels. (Default: " \
                                 "number of channels)", default=None)
     parser.add_option('--sigma', dest='sigma', type='float', \
                         help="Signal-to-Noise of the pulse." \
-                             "(Default: Do not specify. You must specify the number ofsubbands.)", \
+                             "(Default: Do not specify. In this case you must specify the " \
+                             "number of subbands.)", \
                         default=None)
     parser.add_option('-d', '--dm', dest='dm', type='float', \
                         help="DM to use when dedispersing data for plot. " \
@@ -426,15 +449,23 @@ if __name__=='__main__':
                              "  Rank 3: maybe astrophysical, very low S/N,"\
                              "  Rank 4: probably astrophysical but weak, low S/N,"\
                              "  Rank 5: Very high chance of being astrophysical. S/N>8.0,"\
-                             "  Rank 6: Almost guranteed to be astrophysical. S/N>9.2,"\
-                             "  Rank 7: Either bright astrophysical source or RFI.",\
+                             "  Rank 6: Almost guranteed to be astrophysical. S/N>9.2,",\
                         default=3)
+    parser.add_option('--group-rank', dest='group_rank', type='int',\
+                       help="Min rank you want to make spd files for. (Default: None)"\
+                             "  Rank 1: noise,"\
+                             "  Rank 2: RFI,"\
+                             "  Rank 3: maybe astrophysical, very low S/N,"\
+                             "  Rank 4: probably astrophysical but weak, low S/N,"\
+                             "  Rank 5: Very high chance of being astrophysical. S/N>8.0,"\
+                             "  Rank 6: Almost guranteed to be astrophysical. S/N>9.2,",\
+                        default=None)
     parser.add_option('--use_manual_params', dest='man_params', action='store_true', \
                         help="If this flag is not set it will use the parameters " \
                                 "from the RRATrap groups.txt file. "\
                                 "(Default: Not use this flag. When using "\
                                 "parameters from the output of rratrap. Just input"\
-                                "the .inf file, groups.txt file, mask file, the PSRFITs file"\
+                                "groups.txt file, mask file, the PSRFITs file"\
                                 "and the .singlepulse files as input. No need to specify any of"\
                                 " the other arguments.)",\
                         default=False)
@@ -454,8 +485,6 @@ if __name__=='__main__':
     if (hasattr(options, 'bandpass_corr')) and (not hasattr(options, 'maskfile')):
         raise ValueError("For bandpass correction you need to supply a mask file.")
     if not hasattr(options, 'man_params'):
-        if not hasattr(options, 'infile'):
-            raise ValueError("A .inf file must be given on the command line! ") 
         if not hasattr(options, 'txtfile'):
             raise ValueError("The groups.txt file must be given on the command line! ") 
     else:

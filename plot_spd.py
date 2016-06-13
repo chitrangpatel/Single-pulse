@@ -1,17 +1,39 @@
 #! /usr/bin/env python
 
-import sys
-import os
 import numpy as np
 import optparse
 import tarfile 
 from subprocess import Popen, PIPE
 import sp_pgplot
-import sp_utils
 import read_spd
-import matplotlib.pyplot as plt
+import spio
 
-def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spec, integrate_ts, disp_pulse, tar):
+def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_waterfall=True, integrate_spec=True, integrate_ts=True, disp_pulse=True, tar=None):
+    """
+       Generates spd plots which include the following subplots:
+           De-dispersed Zero-DM filtered Waterfall plot
+           De-dispersed Waterfall plot
+        optional subplots:
+           Dispersed Zero-DM filtered Waterfall plot (Inset of the corresponding dedispersed plot).
+           Dispersed Waterfall plot ((Inset of the corresponding dedispersed plot).).
+           Dedispersed zero-DM filtered time series for the corresponding waterfall plot.
+           Dedispersed time series for the corresponding waterfall plot.
+           Spectra of the de-dispersed pulse for each of the above waterfalled plots.
+           SNR vs DM
+           DM vs. Time
+
+        Inputs:
+           spdfile: A .spd file.
+        Optional Inputs:  
+           singlepulsefiles: list of .singlepulse files
+           xwin: plot in an xwin window?
+           outfile: name of the output file you want.
+           just_waterfall: Do you only want to display the waterfall plots?
+           integrate_spec: Do you want to show the pulse spectrum?
+           integrate_ts: Do you want to show the time series?
+           disp_pulse: Do you want to show the inset dispersed pulse?
+           tar: Supply the tarball of the singlepulse files instead of individual files.
+    """
     if not spdfile.endswith(".spd"):
 	    raise ValueError("The first file must be a .spd file")
     #npzfile = np.load(spdfile)
@@ -236,6 +258,7 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         if not man_params:
             dm_arr = np.float32(spdobj.dmVt_this_dms)
             sigma_arr = np.float32 (spdobj.dmVt_this_sigmas)
+            time_arr = np.float32 (spdobj.dmVt_this_times)
             if integrate_spec:
                 sp_pgplot.ppgplot.pgsvp(0.55, 0.80, 0.65, 0.90)
             else:
@@ -249,6 +272,9 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
             sp_pgplot.ppgplot.pgmtxt('L', 1.8, 0.5, 0.5, "Signal-to-noise")
             sp_pgplot.ppgplot.pgpt(dm_arr, sigma_arr, 20)
         else:
+            dm_arr = np.array([])
+            sigma_arr = np.array([])
+            time_arr = np.array([])
             if integrate_spec:
                 sp_pgplot.ppgplot.pgsvp(0.55, 0.80, 0.65, 0.90)
             else:
@@ -264,14 +290,14 @@ def plot(spdfile, singlepulsefiles, xwin, outfile, just_waterfall, integrate_spe
         print "Making arrays for DM vs time plot"
         spfiles = singlepulsefiles
         threshold = 5.0
-        dm_list = map(np.float32, list(dm_arr))
-        time_list = map(np.float32, list(spdobj.dmVt_this_times))
         if len(spfiles) > 2:
+            dm_list = map(np.float32, list(dm_arr))
+            time_list = map(np.float32, list(time_arr))
             if integrate_spec:
                 sp_pgplot.ppgplot.pgsvp(0.55, 0.97, 0.1, 0.54)
             else:
                 sp_pgplot.ppgplot.pgsvp(0.48, 0.97, 0.1, 0.54)
-            dms, times, sigmas, widths, filelist = sp_utils.spio.gen_arrays(dm_arr, spfiles, tar, threshold)
+            dms, times, sigmas, widths, filelist = spio.gen_arrays(dm_arr, spfiles, tar, threshold)
             sp_pgplot.dm_time_plot(dms, times, sigmas, dm_list, sigma_arr, time_list, Total_observed_time, xwin)
         else:
             print "You need a .singlepulse.tgz file to plot DM vs Time plot."
@@ -463,11 +489,9 @@ def main():
     (options, args) = parser.parse_args()
    
     if len(args) == 0:
-        print "need a .spd file and .singlepulse files in that order."
-        sys.exit()
+        raise ValueError("need a .spd file and .singlepulse files in that order.")
     if not args[0].endswith(".spd"):
-        print "the first file must be a .spd file"
-        sys.exit()
+        raise ValueError("the first file must be a .spd file")
     if len(args) == 2:
         tar = tarfile.open(args[1], "r:gz")# read in the tarball
         filenames = tar.getnames()# get the filenames
