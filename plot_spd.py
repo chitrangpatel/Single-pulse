@@ -16,7 +16,8 @@ import sp_pgplot
 import read_spd
 import spio
 
-def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_waterfall=True, integrate_spec=True, integrate_ts=True, disp_pulse=True, tar=None):
+def plot(spdfile, singlepulsefiles=None, spec_width=1.5, loc_pulse=0.5, xwin=False, outfile="spdplot", just_waterfall=True, \
+         integrate_spec=True, integrate_ts=True, disp_pulse=True, tar=None):
     """
        Generates spd plots which include the following subplots:
            De-dispersed Zero-DM filtered Waterfall plot
@@ -33,6 +34,9 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
         Inputs:
            spdfile: A .spd file.
         Optional Inputs:  
+           spec_width: Twice this number times the pulse_width around the pulse to consider for the spectrum
+           loc_pulse: Fraction of the window length where the pulse is located.(eg. 0.25 = 1/4th of the way in.
+                                                                                0.5 = middle of the plot)
            singlepulsefiles: list of .singlepulse files
            xwin: plot in an xwin window?
            outfile: name of the output file you want.
@@ -69,7 +73,7 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
     tsamp = spdobj.tsamp
     Total_observed_time = spdobj.total_obs_time
     topo_start = spdobj.pulse_peak_time
-    start = topo_start - 0.25*duration
+    start = topo_start - loc_pulse*duration
     datastart = spdobj.waterfall_start_time
     datasamp = spdobj.waterfall_tsamp
     datanumspectra = spdobj.waterfall_prededisp_nbins
@@ -88,20 +92,20 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
     else:
         if (outfile == "spdplot"): # default filename
             if rank:
-                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+loc_pulse*duration), rank))
             else:
-                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
+                sp_pgplot.ppgplot.pgopen(fn[:-5]+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+loc_pulse*duration)))
         else:
             if rank:
-                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+0.25*duration), rank))
+                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs_rank_%i.spd.ps/VPS'%(subdm, (start+loc_pulse*duration), rank))
             else:
-                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+0.25*duration)))
+                sp_pgplot.ppgplot.pgopen(outfile+'_DM%.1f_%.1fs.spd.ps/VPS'%(subdm, (start+loc_pulse*duration)))
     if (just_waterfall == False):
         sp_pgplot.ppgplot.pgpap(10.25, 8.5/11.0)
         # Dedispersed waterfall plot - zerodm - OFF
         array = spdobj.data_nozerodm_dedisp.astype(np.float64)
         sp_pgplot.ppgplot.pgsvp(0.07, 0.40, 0.50, 0.80)
-        sp_pgplot.ppgplot.pgswin(datastart - start, datastart -start+datanumspectra*datasamp, min_freq, max_freq)
+        sp_pgplot.ppgplot.pgswin(datastart-start, datastart-start+datanumspectra*datasamp, min_freq, max_freq)
         sp_pgplot.ppgplot.pgsch(0.8)
         sp_pgplot.ppgplot.pgslw(3)
         sp_pgplot.ppgplot.pgbox("BCST", 0, 0, "BCNST", 0, 0)
@@ -133,13 +137,14 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - Off
-        spectrum_window = 0.05*duration
-        window_width = int(spectrum_window/datasamp)
-        burst_bin = datanumspectra/downsamp/4
-        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-        Dedisp_spec = on_spec.sum(axis=1)
-        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
+            spectrum_window = spec_width*pulse_width
+            window_width = int(spectrum_window/datasamp)
+            #burst_bin = int(datanumspectra*loc_pulse/downsamp)
+            burst_bin = int(nbins*loc_pulse/downsamp)
+            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+            Dedisp_spec = on_spec.sum(axis=1)
+            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.4, 0.47, 0.5, 0.8)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -183,13 +188,14 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - On
-        spectrum_window = 0.05*duration
-        window_width = int(spectrum_window/datasamp)
-        burst_bin = datanumspectra/downsamp/4
-        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-        Dedisp_spec = on_spec.sum(axis=1)
-        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
+            spectrum_window = spec_width*pulse_width
+            window_width = int(spectrum_window/datasamp)
+            #burst_bin = int(datanumspectra*loc_pulse/downsamp)
+            burst_bin = int(nbins*loc_pulse/downsamp)
+            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+            Dedisp_spec = on_spec.sum(axis=1)
+            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.4, 0.47, 0.1, 0.4)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -354,13 +360,14 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - Off
-        spectrum_window = 0.05*duration
-        window_width = int(spectrum_window/datasamp)
-        burst_bin = datanumspectra/downsamp/4
-        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-        Dedisp_spec = on_spec.sum(axis=1)
-        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
+            spectrum_window = spec_width*pulse_width
+            window_width = int(spectrum_window/datasamp)
+            #burst_bin = int(datanumspectra*loc_pulse/downsamp)
+            burst_bin = int(nbins*loc_pulse/downsamp)
+            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+            Dedisp_spec = on_spec.sum(axis=1)
+            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.7, 0.9, 0.44, 0.75)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -404,13 +411,14 @@ def plot(spdfile, singlepulsefiles=None, xwin=False, outfile="spdplot", just_wat
             sp_pgplot.ppgplot.pgpt(errx1, erry1, -1)
         
         #### Plot Spectrum - Zerodm filter - On
-        spectrum_window = 0.05*duration
-        window_width = int(spectrum_window/datasamp)
-        burst_bin = datanumspectra/downsamp/4
-        on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
-        Dedisp_spec = on_spec.sum(axis=1)
-        freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
         if integrate_spec:
+            spectrum_window = spec_width*pulse_width
+            window_width = int(spectrum_window/datasamp)
+            #burst_bin = int(datanumspectra*loc_pulse/downsamp)
+            burst_bin = int(nbins*loc_pulse/downsamp)
+            on_spec = array[..., burst_bin-window_width:burst_bin+window_width]
+            Dedisp_spec = on_spec.sum(axis=1)
+            freqs = np.linspace(min_freq, max_freq, len(Dedisp_spec)) 
             sp_pgplot.ppgplot.pgsvp(0.70, 0.90, 0.05, 0.36)
             sp_pgplot.ppgplot.pgswin(np.min(Dedisp_spec), 1.05*np.max(Dedisp_spec), min_freq, max_freq)
             sp_pgplot.ppgplot.pgsch(0.8)
@@ -486,6 +494,12 @@ def main():
     parser.add_option("-o", dest= "outfile", type = "string", default = "spdplot", \
                       help= "give a base name to the saved plot. DM, time and" \
                             "rank values will be added automatically" )
+    parser.add_option("--spec-width", dest="spec_width", type="float", help="Twice this number times the pulse width" \
+                      "is the window around the pulse considered for the spectrum. (Default: 1.5)", \
+                      default=1.5)
+    parser.add_option("--loc", dest="loc_pulse", type="float", help="Fraction of the window length where the pulse is located." \
+                      "(Default: 0.5 half way in.)", \
+                      default=0.5)
     parser.add_option("--just-waterfall", action="store_true", dest="just_waterfall",
                       default=False, help="Just produce the waterfall plots.")
     parser.add_option("--show-spec", action="store_true", dest="integrate_spec",
@@ -503,11 +517,11 @@ def main():
     if len(args) == 2:
         tar = tarfile.open(args[1], "r:gz")# read in the tarball
         filenames = tar.getnames()# get the filenames
-        plot(args[0], filenames, options.xwin, options.outfile, options.just_waterfall, \
+        plot(args[0], filenames, options.spec_width, options.loc_pulse, options.xwin, options.outfile, options.just_waterfall, \
              options.integrate_spec, options.integrate_ts, options.disp_pulse, tar)# make the sp plots   
         tar.close()
     else:
-        plot(args[0], args[1:], options.xwin, options.outfile, options.just_waterfall, \
+        plot(args[0], args[1:], options.spec_width, options.loc_pulse, options.xwin, options.outfile, options.just_waterfall, \
              options.integrate_spec, options.integrate_ts, options.disp_pulse, tar = None)# make the sp plots   
 
 if __name__ == '__main__':

@@ -22,60 +22,24 @@ import os.path
 import infodata
 import matplotlib.pyplot as plt
 from Pgplot import *
-from scipy.special import erf
 import optparse
 import sys
+import spio
 
 FRACTIONAL_SIGMA = 0.9 # change to 0.8?
 ALL_RANKS_ORDERED = [1,2,0,3,4,5,6]
 DEBUG = True # if True, will be verbose
 
-def dmthreshold(dm, use_ddplan, min_group=45):
-    if use_ddplan:
+def dmthreshold(dm, use_dmplan, min_group=45):
+    if use_dmplan:
         import rratrap_config
-        dmt, min_group = rratrap_config.use_ddplan(dm)
+        dmt, min_group = rratrap_config.use_dmplan(dm)
     else:
         dmt = 1
         min_group = min_group 
     return dmt, min_group
 
-    
-def old_read_sp_files(sp_files):
-    """*** OLD VERSION ***
-        Read all *.singlepulse files in the current directory.
-	Return 5 arrays (properties of all single pulses):
-		DM, sigma, time, sample, downfact.
-    """
-    tmp_sp_params = np.array(np.empty((1,0)), 
-                             dtype=np.dtype([('dm', 'float64'),
-                                             ('sigma','float32'),
-                                             ('time','float64'),
-                                             ('sample','uint32'),
-                                             ('downfact','uint8')]))
 
-    for file in sp_files:
-       if os.path.getsize(file):
-           curr = np.atleast_2d(np.loadtxt(file, dtype=np.dtype([('dm', 'float64'),('sigma','float32'),('time','float64'),('sample','uint32'),('downfact','uint8')])))
-           tmp_sp_params = np.concatenate([tmp_sp_params, curr], axis=1)
-
-    return tmp_sp_params
-
-
-def read_sp_files(sp_files):
-    """Read all *.singlepulse files in the current directory.
-	Return 5 arrays (properties of all single pulses):
-		DM, sigma, time, sample, downfact.
-    """
-    finput = fileinput.input(sp_files)
-    data = np.loadtxt(finput, 
-                      dtype=np.dtype([('dm', 'float32'),
-                                      ('sigma','float32'),
-                                      ('time','float32'),
-                                      ('sample','uint32'),
-                                      ('downfact','uint8')]))
-    return np.atleast_2d(data)
-
-#class SinglePulseGroup:
 class SinglePulseGroup(object): # Greg's modification
     """Define single pulse group
     """
@@ -109,7 +73,7 @@ class SinglePulseGroup(object): # Greg's modification
         return cmp(ALL_RANKS_ORDERED.index(self.rank),
                    ALL_RANKS_ORDERED.index(other.rank))
         return dmt
-    def timeisclose(self,other,use_ddplan,time_thresh=0.5):
+    def timeisclose(self,other,use_dmplan,time_thresh=0.5):
         """Checks whether the overlap in time of self and other is within
             time_thresh. Takes as input other, a SinglePulseGroup object,
             as well as the optional input time_thresh (in s).
@@ -120,18 +84,18 @@ class SinglePulseGroup(object): # Greg's modification
         else:
             narrow = other
             wide = self
-        time_thresh = dmthreshold(self.min_dm, use_ddplan)[0]*time_thresh
+        time_thresh = dmthreshold(self.min_dm, use_dmplan)[0]*time_thresh
         dt = max(time_thresh, narrow.duration/2.0) # always group groups within time_thresh (or duration/2, if longer) of one another
         timeisclose = (wide.max_time >= (narrow.center_time - dt)) and\
                         (wide.min_time <= (narrow.center_time + dt))
         
         return timeisclose
 
-    def dmisclose(self,other,use_ddplan,dm_thresh=0.1):
+    def dmisclose(self,other,use_dmplan,dm_thresh=0.1):
         """Checks whether the DM of self and other is within dm_thresh of one
             another. Takes as input other, a SinglePulseGroup object, as well as the optional input dm_thresh (in pc cm-3).
         """
-        dm_thresh = dmthreshold(self.min_dm, use_ddplan)[0]*dm_thresh
+        dm_thresh = dmthreshold(self.min_dm, use_dmplan)[0]*dm_thresh
         dmisclose = (other.max_dm >= (self.min_dm-dm_thresh)) and\
                     (other.min_dm <= (self.max_dm+dm_thresh))
 
@@ -163,7 +127,7 @@ class SinglePulseGroup(object): # Greg's modification
         return '\n'.join(s)
 
 def create_groups(sps, inffile, min_nearby=1, time_thresh=0.5, \
-                    dm_thresh=0.1, ignore_obs_end=0, use_ddplan=False):
+                    dm_thresh=0.1, ignore_obs_end=0, use_dmplan=False):
     """Given a recarray of singlepulses return a list of
         SinglePulseGroup objects.
 
@@ -202,8 +166,8 @@ def create_groups(sps, inffile, min_nearby=1, time_thresh=0.5, \
             continue
         cdm = sps[ii]['dm']
         ngood = 0 # number of good neighbours
-        time_thresh = dmthreshold(cdm, use_ddplan)[0]*time_thresh
-        dm_thresh = dmthreshold(cdm, use_ddplan)[0]*dm_thresh
+        time_thresh = dmthreshold(cdm, use_dmplan)[0]*time_thresh
+        dm_thresh = dmthreshold(cdm, use_dmplan)[0]*dm_thresh
         
         jj = ii+1
         while (ngood < min_nearby) and (jj < numsps) and \
@@ -225,7 +189,7 @@ def create_groups(sps, inffile, min_nearby=1, time_thresh=0.5, \
     return groups
 
 
-def grouping_sp_dmt(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
+def grouping_sp_dmt(groups, use_dmplan=False, time_thresh=0.5, dm_thresh=0.1):
     """Groups SinglePulse objects based on proximity in time, DM. 
         Outputs list of Single Pulse Groups.
     """
@@ -236,14 +200,14 @@ def grouping_sp_dmt(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
         for i, grp1 in enumerate(groups):
             j=i+1
             while (j<len(groups) and groups[i].center_time+0.2 > groups[j].center_time): #Only look at groups that are close in time
-               if grp1.dmisclose(groups[j], use_ddplan, dm_thresh):
-                    if grp1.timeisclose(groups[j], use_ddplan, time_thresh):
+               if grp1.dmisclose(groups[j], use_dmplan, dm_thresh):
+                    if grp1.timeisclose(groups[j], use_dmplan, time_thresh):
                         grp1.combine(groups.pop(j))
                         didcombine = True
                j=j+1
 
 
-def grouping_rfi(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
+def grouping_rfi(groups, use_dmplan=False, time_thresh=0.5, dm_thresh=0.1):
     """
     Groups together close groups of RFI, and considers as RFI other groups
     that are close to RFI.
@@ -260,7 +224,7 @@ def grouping_rfi(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
                 grp2 = groups[j]
                 if (grp1.rank != 2) and (grp2.rank != 2):
                     continue
-                if grp1.dmisclose(grp2,use_ddplan,10) and grp1.timeisclose(grp2, use_ddplan, time_thresh): # use bigger time thresh?
+                if grp1.dmisclose(grp2,use_dmplan,10) and grp1.timeisclose(grp2, use_dmplan, time_thresh): # use bigger time thresh?
                     grp1.combine(groups.pop(j))
                     # FIXME: Should we set as RFI without checking
                     #        sigma behaviour (ie re-check rank) for group?
@@ -268,7 +232,7 @@ def grouping_rfi(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
                     didcombine = True
 
 
-def grouping_sp_t(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
+def grouping_sp_t(groups, use_dmplan=False, time_thresh=0.5, dm_thresh=0.1):
     """Groups SinglePulse objects based on proximity in time, assuming 
         the DM difference is no more than DMDIFF=10.
 
@@ -284,15 +248,10 @@ def grouping_sp_t(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
         didcombine = False
         for i, grp1 in enumerate(groups):
             for j in range(len(groups)-1,i,-1):
-                if grp1.timeisclose(groups[j], use_ddplan, time_thresh) and \
-                    grp1.dmisclose(groups[j],use_ddplan,DMDIFF): # We check if two events
+                if grp1.timeisclose(groups[j], use_dmplan, time_thresh) and \
+                    grp1.dmisclose(groups[j],use_dmplan,DMDIFF): # We check if two events
                                                       # have similar time and 
                                                       # a DM difference < DMDIFF
-#                    if DEBUG:
-#                        if grp1.rank == 2 or groups[j].rank == 2:
-#                            print "Grouping RFI group(s). grp1 rank: %s, \
-#                                    grp2 rank: %s, time: %s" \
-#                                    % (grp1.rank, groups[j].rank, grp1.center_time)
                     grp1.combine(groups.pop(j)) # Note group rank is not 
                                                 # updated when combine groups,
                                                 # need to re-run ranking after.
@@ -300,7 +259,7 @@ def grouping_sp_t(groups, use_ddplan=False, time_thresh=0.5, dm_thresh=0.1):
     return groups
 
 
-def flag_noise(groups, use_ddplan=False, min_group=45):
+def flag_noise(groups, use_dmplan=False, min_group=45):
     """Flag groups as noise based on group size.
         If the number of sp events in a group is < min_group,
         this group is marked as noise.
@@ -315,7 +274,7 @@ def flag_noise(groups, use_ddplan=False, min_group=45):
             None
     """
     for grp in groups:
-        min_group = dmthreshold(grp.min_dm, use_ddplan, min_group)[1]
+        min_group = dmthreshold(grp.min_dm, use_dmplan, min_group)[1]
         if grp.numpulses < min_group:
             grp.rank = 1
     return groups
@@ -343,7 +302,7 @@ def flag_rfi(groups, close_dm = 2.0):
                     break
 
 
-def rank_groups(groups, use_ddplan=False, min_group=45, min_sigma=8.0):
+def rank_groups(groups, use_dmplan=False, min_group=45, min_sigma=8.0):
     """Rank groups based on their sigma vs. DM behaviour. 
         Takes as input list of Single Pulse Groups.
         The ranks of the groups are updated in-place.
@@ -356,7 +315,7 @@ def rank_groups(groups, use_ddplan=False, min_group=45, min_sigma=8.0):
     """
 #   divide groups into 5 parts (based on number events) to examine sigma behaviour
     for grp in groups:
-        min_group = dmthreshold(grp.min_dm, use_ddplan, min_group)[1]
+        min_group = dmthreshold(grp.min_dm, use_dmplan, min_group)[1]
         if len(grp.singlepulses) < min_group:
             grp.rank = 1
         elif grp.rank != 2: # don't overwrite ranks of rfi groups
@@ -393,7 +352,6 @@ def rank_groups(groups, use_ddplan=False, min_group=45, min_sigma=8.0):
             #if maxavgsigma<1.05*minavgsigma:
             if all(stdsigma < 0.1 for stdsigma in stdsigmas): 
                 # Sigmas pretty much constant. Group is RFI
-                # FIXME: do this better; there can be fluctuations! use stddev
                 grp.rank = 2
             if maxsigmas[2] > maxsigmas[1]:
                 if maxsigmas[2] > maxsigmas[3]:
@@ -437,33 +395,6 @@ def rank_groups(groups, use_ddplan=False, min_group=45, min_sigma=8.0):
             if grp.rank == 0:
                 pass 
 
-def ddm_response(ddm, width_ms, lofreq, hifreq):
-    if np.isscalar(ddm):
-        ddm = np.array([ddm])
-        scal = True
-    else:
-        ddm = np.array([ddm])
-        scal = False
-    band_MHz = np.array((lofreq, hifreq))
-    zeta = 6.91e-3 * ddm * np.diff(band_MHz)[0] / (width_ms * (np.mean(band_MHz)/1000.)**3)
-    result = np.zeros_like(ddm)
-    where_nonzero = np.where(zeta != 0)
-    result[where_nonzero] = 0.5*np.sqrt(np.pi)*erf(zeta[where_nonzero])/zeta[where_nonzero]
-    result[zeta == 0] = 1.
-    if scal: return result[0]
-    else: return result
-
-def theoritical_dmspan(maxsigma, minsigma, width_ms, lofreq, hifreq):
-    # since the sigma threshold = 5
-    sigma_limit = minsigma/maxsigma
-    # spans over a dm range of 1000 (500*2)  
-    ddm = np.linspace(0, 5000, 50001)
-    # makes a normalized gaussian of sigma values
-    sigma_range = ddm_response(ddm, width_ms, lofreq, hifreq)
-    # Returns te index where sigma_limit is closest to one of the values in sigma_range
-    ind = (np.abs(sigma_range-sigma_limit)).argmin()
-    return 2*ddm[ind]
-
 def check_dmspan(groups, dt, lofreq, hifreq):
     """Read in groups and check whether each group's DM span exceeds the threshold.
     """
@@ -473,7 +404,7 @@ def check_dmspan(groups, dt, lofreq, hifreq):
                 downsamp = (sp[2]/dt)/sp[3]
                 width_ms = 1000.0*sp[4]*dt*downsamp
                 break
-        if (grp.max_dm-grp.min_dm > 5*theoritical_dmspan(grp.max_sigma, 5.0, width_ms, lofreq, hifreq)): 
+        if (grp.max_dm-grp.min_dm > 5*spio.theoritical_dmspan(grp.max_sigma, 5.0, width_ms, lofreq, hifreq)): 
             # checks if the DM span is more than 5 times theoritical dm value.
             if not ((grp.rank == 5) or (grp.rank == 6)): #if group is not good or excellent
                 grp.rank = 2                             # then its most likely RFI.
@@ -675,7 +606,7 @@ def main():
     parser.add_option('--use-configfile', dest='use_configfile', action='store_true', \
                         help="If this flag is set - import the config file for selecting grouping" \
                         "parameters.(Default: do not use a config file.)", default=False)
-    parser.add_option('--use-DDplan', dest='use_DDplan', action='store_true', \
+    parser.add_option('--use-DMplan', dest='use_DMplan', action='store_true', \
                         help="If this flag is set - Use the ddplan for selecting grouping" \
                         "parameters. Make sure that you have a corresponding config file containing" \
                         "the DDplan.  (Default: do not use ddplan)", default=False)
@@ -721,7 +652,7 @@ def main():
         raise ValueError("Cannot recognize file type from extension. "
                          " Only '.inf' types are supported.")
     
-    if options.use_DDplan or options.use_configfile:
+    if options.use_DMplan or options.use_configfile:
         import rratrap_config
 
     RANKS = np.asarray([2,0,3,4,5,6])
@@ -751,28 +682,28 @@ def main():
     inf = infodata.infodata(inffile)    
     print_debug("Beginning read_sp_files... "+strftime("%Y-%m-%d %H:%M:%S"))
     
-    groups = read_sp_files(args[1:])[0]
+    groups = spio.read_sp_files(args[1:])[0]
     print_debug("Finished read_sp_files, beginning create_groups... " +
                 strftime("%Y-%m-%d %H:%M:%S"))
     print_debug("Number of single pulse events: %d " % len(groups))
     
-    groups = create_groups(groups, inffile, min_nearby=1, ignore_obs_end=10, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH, use_ddplan=options.use_DDplan) # ignore the last 10 seconds of the obs, for palfa
+    groups = create_groups(groups, inffile, min_nearby=1, ignore_obs_end=10, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH, use_dmplan=options.use_DMplan) # ignore the last 10 seconds of the obs, for palfa
     print_debug("Number of groups: %d " % len(groups))
     print_debug("Finished create_groups, beginning grouping_sp_dmt... " +
                     strftime("%Y-%m-%d %H:%M:%S"))
     
-    grouping_sp_dmt(groups, use_ddplan=options.use_DDplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
+    grouping_sp_dmt(groups, use_dmplan=options.use_DMplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
     print_debug("Number of groups (after initial grouping): %d " % len(groups))
     print_debug("Finished grouping_sp_dmt, beginning flag_noise... " + 
                 strftime("%Y-%m-%d %H:%M:%S"))
-    flag_noise(groups, use_ddplan=options.use_DDplan, min_group=MIN_GROUP) # do an initial coarse noise flagging and removal
+    flag_noise(groups, use_dmplan=options.use_DMplan, min_group=MIN_GROUP) # do an initial coarse noise flagging and removal
     pop_by_rank(groups, 1)
     print_debug("Number of groups (after removed noise gps w <10 sps): %d " % len(groups))
     print_debug("Beginning grouping_sp_t... " +
                 strftime("%Y-%m-%d %H:%M:%S"))
     
     # Regroup good groups based on proximity in time only (compensate for missing middles):
-    groups = grouping_sp_t(groups, use_ddplan=options.use_DDplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
+    groups = grouping_sp_t(groups, use_dmplan=options.use_DMplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
     print_debug("Finished grouping_sp_t. " + strftime("%Y-%m-%d %H:%M:%S"))
     
     # Flag RFI groups, noise
@@ -780,7 +711,7 @@ def main():
     # Rank groups and identify noise (<45/40/35/30 sp events) groups
     
     print_debug("Ranking groups...")
-    rank_groups(groups, use_ddplan=options.use_DDplan, min_group=MIN_GROUP, min_sigma=MIN_SIGMA)
+    rank_groups(groups, use_dmplan=options.use_DMplan, min_group=MIN_GROUP, min_sigma=MIN_SIGMA)
     # Remove noise groups
     print_debug("Before removing noise, len(groups): %s" % len(groups))
     pop_by_rank(groups, 1)
@@ -789,7 +720,7 @@ def main():
     # Group rfi with very close groups
     print_debug("len(groups) before grouping_rfi: %s" % len(groups))
     print_debug("Beginning grouping_rfi... " + strftime("%Y-%m-%d %H:%M:%S"))
-    grouping_rfi(groups, use_ddplan=options.use_DDplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
+    grouping_rfi(groups, use_dmplan=options.use_DMplan, time_thresh=TIME_THRESH, dm_thresh=DM_THRESH)
     print_debug("Finished grouping_rfi. " + 
                 strftime("%Y-%m-%d %H:%M:%S"))
     

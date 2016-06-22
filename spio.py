@@ -1,5 +1,6 @@
 import numpy as _np
 import fileinput as _fileinput
+from scipy.special import erf
 
 def get_textfile(txtfile):
     """ Read in the groups.txt file.
@@ -97,6 +98,26 @@ def read_RRATrap_info(groupfile, group_to_read, rank):
     return dm_list, time_list, dm_arr, sigma_arr, width_arr
 
 
+def old_read_sp_files(sp_files):
+    """*** OLD VERSION ***
+        Read all *.singlepulse files in the current directory.
+	Return 5 arrays (properties of all single pulses):
+		DM, sigma, time, sample, downfact.
+    """
+    tmp_sp_params = _np.array(_np.empty((1,0)), 
+                             dtype=_np.dtype([('dm', 'float64'),
+                                             ('sigma','float32'),
+                                             ('time','float64'),
+                                             ('sample','uint32'),
+                                             ('downfact','uint8')]))
+
+    for file in sp_files:
+       if os.path.getsize(file):
+           curr = _np.atleast_2d(_np.loadtxt(file, dtype=_np.dtype([('dm', 'float64'),('sigma','float32'),('time','float64'),('sample','uint32'),('downfact','uint8')])))
+           tmp_sp_params = _np.concatenate([tmp_sp_params, curr], axis=1)
+
+    return tmp_sp_params
+
 def read_sp_files(files):
     """Read all *.singlepulse files in the current directory in a DM range.
         Return 5 arrays (properties of all single pulses):
@@ -153,6 +174,33 @@ def pick_DM_for_singlepulse_files(filenm):
        Output: float: DM value of that file.
     """
     return float(filenm[filenm.find('DM')+2:filenm.find('.singlepulse')])
+
+def ddm_response(ddm, width_ms, lofreq, hifreq):
+    if _np.isscalar(ddm):
+        ddm = _np.array([ddm])
+        scal = True
+    else:
+        ddm = _np.array([ddm])
+        scal = False
+    band_MHz = _np.array((lofreq, hifreq))
+    zeta = 6.91e-3 * ddm * _np.diff(band_MHz)[0] / (width_ms * (_np.mean(band_MHz)/1000.)**3)
+    result = _np.zeros_like(ddm)
+    where_nonzero = _np.where(zeta != 0)
+    result[where_nonzero] = 0.5*_np.sqrt(_np.pi)*erf(zeta[where_nonzero])/zeta[where_nonzero]
+    result[zeta == 0] = 1.
+    if scal: return result[0]
+    else: return result
+
+def theoritical_dmspan(maxsigma, minsigma, width_ms, lofreq, hifreq):
+    # since the sigma threshold = 5
+    sigma_limit = minsigma/maxsigma
+    # spans over a dm range of 1000 (500*2)  
+    ddm = _np.linspace(0, 5000, 50001)
+    # makes a normalized gaussian of sigma values
+    sigma_range = ddm_response(ddm, width_ms, lofreq, hifreq)
+    # Returns te index where sigma_limit is closest to one of the values in sigma_range
+    ind = (_np.abs(sigma_range-sigma_limit)).argmin()
+    return 2*ddm[ind]
 
 def gen_arrays(dm, sp_files, tar, threshold):    
     """

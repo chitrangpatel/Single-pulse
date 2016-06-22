@@ -63,9 +63,11 @@ def make_spd_from_file(spdcand, rawdatafile, \
                        min_rank, group_rank, \
                        plot, just_waterfall, \
                        integrate_ts, integrate_spec, disp_pulse, \
+                       loc_pulse, \
                        maxnumcands, \
                        basename, \
-                       mask=False, bandpass_corr=True, man_params=None):
+                       mask=False, bandpass_corr=True, barytime=True, \
+                       man_params=None):
     
     """
     Makes spd files from output files of rratrap. 
@@ -82,11 +84,14 @@ def make_spd_from_file(spdcand, rawdatafile, \
         integrate_ts: Do you want to display the dedispersed time series in the plot?
         integrate_spec: Do you want to display the pulse spectrum in the plot?
         disp_pulse: Do you want to see the inset dispersed pulse in the plot?
+        loc_pulse: Fraction of the window length where the pulse is located.(eg. 0.25 = 1/4th of the way in.
+                                                                             0.5 = middle of the plot)
         maxnumcands: What is the maximum number of candidates you would like to generate?
         basename: output basename of the file. Appended with _DM_TIME(s)_RANK.spd 
     Optional arguments:
         mask: Do you want to mask out rfi contaminated channels?
         bandpass_corr: Do you want to remove the bandpass?
+        barytime: Is the given time(s) barycentric?
         man_params: Do you want to specify the parameters for waterfalling 
                     manually? If yes, I suggest using the function make_spd_from_man_params().
                     (I suggest giving it the rratrap output file)    
@@ -114,8 +119,9 @@ def make_spd_from_file(spdcand, rawdatafile, \
                 # Array for Plotting Dedispersed waterfall plot - zerodm - OFF
                 spdcand.read_from_file(values[ii], rawdatafile.tsamp, rawdatafile.specinfo.N, \
                                        rawdatafile.frequencies[0], rawdatafile.frequencies[-1], \
-                                       rawdatafile, dedisp = True, \
+                                       rawdatafile, loc_pulse=loc_pulse, dedisp = True, \
                                        scaleindep = None, zerodm = None, mask = mask, \
+                                       barytime=barytime, \
                                        bandpass_corr = bandpass_corr)
 
                 #make an array to store header information for the spd files
@@ -151,8 +157,9 @@ def make_spd_from_file(spdcand, rawdatafile, \
                 ####Sweeped without zerodm
                 spdcand.read_from_file(values[ii], rawdatafile.tsamp, rawdatafile.specinfo.N, \
                                       rawdatafile.frequencies[0], rawdatafile.frequencies[-1], \
-                                      rawdatafile, dedisp = None, \
+                                      rawdatafile, loc_pulse=loc_pulse, dedisp = None, \
                                       scaleindep = None, zerodm = None, mask = mask, \
+                                      barytime=barytime, \
                                       bandpass_corr = bandpass_corr)
                 data, Data_nozerodm = waterfall_array(rawdatafile, spdcand.start, \
                                            spdcand.duration, spdcand.dm, spdcand.nbins, spdcand.nsub, \
@@ -197,6 +204,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
                 if plot:
                     print_debug("Now plotting...")
                     plot_spd.plot(temp_filename+".spd", args[1:], \
+                                  spec_width=1.5, loc_pulse=loc_pulse, \
                                   xwin=False, outfile=basename, \
                                   just_waterfall=just_waterfall, \
                                   integrate_spec=integrate_spec, \
@@ -223,9 +231,10 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                              width_bins, nbins, downsamp, \
                              nsub, \
                              scaleindep, \
+                             spec_width, loc_pulse, \
                              integrate_ts, integrate_spec, disp_pulse, \
                              basename, \
-                             mask, bandpass_corr, man_params):            
+                             mask, bandpass_corr, barytime, man_params):            
     """
     Makes spd files from output files of rratrap. 
     Inputs:
@@ -248,12 +257,16 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
         downsamp: Factor to downsample in time by. Default: Don't downsample.
         nsub: Number of subbands to use. Must be a factor of number of channels.
         scaleindep:Do you want to scale each subband independently?(Type: Boolean)
+        spec_width: Twice this number times the pulse_width around the pulse to consider for the spectrum
+        loc_pulse: Fraction of the window length where the pulse is located.(eg. 0.25 = 1/4th of the way in.
+                                                                             0.5 = middle of the plot)
         integrate_ts: Do you want to display the dedispersed time series in the plot?
         integrate_spec: Do you want to display the pulse spectrum in the plot?
         disp_pulse: Do you want to see the inset dispersed pulse in the plot?
         basename: output basename of the file. Appended with _DM_TIME(s)_RANK.spd 
         mask: Do you want to mask out rfi contaminated channels?
         bandpass_corr: Do you want to remove the bandpass?
+        barytime: Is the given time(s) barycentric?
         man_params: Do you want to specify the parameters for waterfalling 
                     manually? If yes, I suggest using the function make_spd_from_man_params().
                     (I suggest giving it the rratrap output file)    
@@ -269,8 +282,8 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                          width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, \
                          rawdatafile.specinfo.N, \
                          rawdatafile.frequencies[0], rawdatafile.frequencies[-1], rawdatafile, \
-                         dedisp=True, scaleindep=False, zerodm=False, \
-                         mask=mask, bandpass_corr=bandpass_corr)
+                         loc_pulse=loc_pulse, dedisp=True, scaleindep=False, zerodm=False, \
+                         mask=mask, barytime=barytime, bandpass_corr=bandpass_corr)
     #make an array to store header information for the spd files
     temp_filename = basename+"_DM%.1f_%.1fs"%(spdcand.subdm, spdcand.topo_start_time)
            
@@ -304,8 +317,8 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
                           width_bins, downsamp, duration, nbins, nsub, rawdatafile.tsamp, \
                           rawdatafile.specinfo.N, \
                           rawdatafile.frequencies[0], rawdatafile.frequencies[-1], rawdatafile, \
-                          dedisp=None, scaleindep=None, zerodm=None, mask=mask, \
-                          bandpass_corr=bandpass_corr)
+                          loc_pulse=loc_pulse, dedisp=None, scaleindep=None, zerodm=None, mask=mask, \
+                          barytime=barytime, bandpass_corr=bandpass_corr)
     data, Data_nozerodm = waterfall_array(rawdatafile, spdcand.start, \
                                  spdcand.duration, spdcand.dm, spdcand.nbins, spdcand.nsub, \
                                  spdcand.subdm, spdcand.zerodm, spdcand.downsamp, \
@@ -342,7 +355,8 @@ def make_spd_from_man_params(spdcand, rawdatafile, \
     #### Arrays for Plotting DM vs Time is in plot_spd.plot(...)
     if plot:
         print_debug("Now plotting...")
-        plot_spd.plot(temp_filename+".spd", args[1:], xwin=False, \
+        plot_spd.plot(temp_filename+".spd", args[1:], \
+                      spec_width=spec_width, loc_pulse=loc_pulse, xwin=False, \
                       outfile = basename, just_waterfall=just_waterfall, \
                       integrate_spec=integrate_spec, integrate_ts=integrate_ts, \
                       disp_pulse=disp_pulse, tar = None)
@@ -376,9 +390,11 @@ def main():
                            options.min_rank, options.group_rank, \
                            options.plot, options.just_waterfall, \
                            options.integrate_ts, options.integrate_spec, options.disp_pulse, \
+                           options.loc_pulse, \
                            options.maxnumcands, \
                            basename, \
-                           mask=options.mask, bandpass_corr=options.bandpass_corr)
+                           mask=options.mask, barytime=options.barytime, \
+                           bandpass_corr=options.bandpass_corr)
     else:
         print_debug("Making spd files based on mannual parameters. I suggest" \
                     "reading in parameters from the groups.txt file.")
@@ -391,9 +407,11 @@ def main():
                                  options.width_bins, options.nbins, options.downsamp, \
                                  options.nsub, \
                                  options.scaleindep, \
+                                 options.spec_width, options.loc_pulse, \
                                  options.integrate_ts, options.integrate_spec, options.disp_pulse, \
                                  basename, \
-                                 options.mask, options.bandpass_corr, options.man_params)            
+                                 options.mask, options.bandpass_corr, options.barytime, \
+                                 options.man_params)            
 
 if __name__=='__main__':
     parser = optparse.OptionParser(prog="sp_pipeline..py", \
@@ -437,6 +455,14 @@ if __name__=='__main__':
     parser.add_option('--show-spec', dest='integrate_spec', action='store_true', \
                         help="Plot the spectrum. " \
                                 "(Default: Do not show the spectrum)", default=False)
+    parser.add_option("--spec-width", dest="spec_width", type="float", help="Twice " \
+                      "this number times the pulse width is the window around the " \
+                      "pulse considered for the spectrum. (Default: 1.5)", \
+                      default=1.5)
+    parser.add_option("--loc", dest="loc_pulse", type="float", help="Fraction of " \
+                      "the window length where the pulse is located." \
+                      "(Default: 0.5: half way in.)", \
+                      default=0.5)
     parser.add_option('--show-sweep', dest='disp_pulse', action='store_true', \
                         help="Plot the inset dispersed pulse. " \
                                 "(Default: Do not show the dispersed pulse)", default=False)
@@ -447,6 +473,10 @@ if __name__=='__main__':
     parser.add_option('-T', '--start-time', dest='start', type='float', \
                         help="Time into observation (in seconds) at which " \
                                 "to start plot.")
+    parser.add_option('--notopo', dest='barytime', action='store_false', \
+                        help="Do not topocenter the given time. Use this option " \
+                             "only if the given time is topocentric." \
+                             "(Default: topocenter the given barycentric time)", default=True)
     parser.add_option('-t', '--duration', dest='duration', type='float', \
                         help="Duration (in seconds) of plot.")
     parser.add_option('-n', '--nbins', dest='nbins', type='int', \
