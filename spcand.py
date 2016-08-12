@@ -1,12 +1,11 @@
 import numpy as np
 import bary_and_topo
-
 def topo_timeshift(bary_start_time, time_shift, topo):
     ind = np.where(topo == float(int(bary_start_time)/10*10))[0]
     return time_shift[ind]
 
 def numsub(nchans, snr):
-    if nchans!=960 and np.log2(nchans)%2==0.0: #Puppi L-wide and GBNCC 
+    if not nchans==960 and np.log2(nchans).is_integer(): #Puppi L-wide and GBNCC 
         if snr < 10:
             nsub = 32
         elif snr >= 10 and snr < 15:
