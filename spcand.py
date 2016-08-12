@@ -99,7 +99,7 @@ class params:
             self.start = 0.0
         self.start_bin = np.round(self.start/tsamp).astype('int')
         self.pulse_width = self.width_bins*self.downsamp*tsamp
-        self.nsub = numsub(rawdatafile.nchans, self.sigma)
+        self.nsub = numsub(rawdatafile.nchan, self.sigma)
         self.zerodm = zerodm
         if dedisp:
             self.dm = self.subdm
