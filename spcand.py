@@ -5,6 +5,24 @@ def topo_timeshift(bary_start_time, time_shift, topo):
     ind = np.where(topo == float(int(bary_start_time)/10*10))[0]
     return time_shift[ind]
 
+def numsub(nchans, snr):
+    if nchans!=960 and np.log2(nchans)%2==0.0: #Puppi L-wide and GBNCC 
+        if snr < 10:
+            nsub = 32
+        elif snr >= 10 and snr < 15:
+            nsub = 64
+        else:
+            nsub = 128
+    elif nchans == 960: #PALFA
+        if snr < 10:
+            nsub = 32
+        elif snr >= 10 and snr < 15:
+            nsub = 64
+        else:
+            nsub = 96
+    else:
+        nsub = nchans
+    return nsub    
 
 class params:
     """
@@ -81,12 +99,7 @@ class params:
             self.start = 0.0
         self.start_bin = np.round(self.start/tsamp).astype('int')
         self.pulse_width = self.width_bins*self.downsamp*tsamp
-        if self.sigma < 10:
-            self.nsub = 32
-        elif self.sigma >= 10 and self.sigma < 15:
-            self.nsub = 64
-        else:
-            self.nsub = 96
+        self.nsub = numsub(rawdatafile.nchans, self.sigma)
         self.zerodm = zerodm
         if dedisp:
             self.dm = self.subdm
