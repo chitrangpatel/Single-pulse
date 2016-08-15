@@ -55,7 +55,7 @@ class params:
 
     def read_from_file(self, params, tsamp, N, lofreq, hifreq, rawdatafile, loc_pulse = 0.5, dedisp = False, \
                        scaleindep = None, zerodm = None, mask = None, barytime = True, \
-                       bandpass_corr = False): 
+                       nsub = None, bandpass_corr = False): 
         """
            Set up parameters based on input from the groups.txt file.
            Input: params: list of parameters (DM, S/N, Time, Sample number, downfactor)
@@ -98,7 +98,10 @@ class params:
             self.start = 0.0
         self.start_bin = np.round(self.start/tsamp).astype('int')
         self.pulse_width = self.width_bins*self.downsamp*tsamp
-        self.nsub = numsub(rawdatafile.nchan, self.sigma)
+        if nsub is not None:
+            self.nsub = nsub
+        else:
+            self.nsub = numsub(rawdatafile.nchan, self.sigma)
         self.zerodm = zerodm
         if dedisp:
             self.dm = self.subdm
