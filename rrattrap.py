@@ -32,8 +32,8 @@ DEBUG = True # if True, will be verbose
 
 def dmthreshold(dm, use_dmplan, min_group=45):
     if use_dmplan:
-        import rratrap_config
-        dmt, min_group = rratrap_config.use_dmplan(dm)
+        import rrattrap_config
+        dmt, min_group = rrattrap_config.use_dmplan(dm)
     else:
         dmt = 1
         min_group = min_group 
@@ -675,20 +675,20 @@ def main():
                          " Only '.inf' types are supported.")
     
     if options.use_DMplan or options.use_configfile:
-        import rratrap_config
+        import rrattrap_config
 
     RANKS = np.asarray([2,0,3,4,5,6])
     
     if options.use_configfile:
-        CLOSE_DM = rratrap_config.CLOSE_DM
-        MIN_GROUP = rratrap_config.MIN_GROUP
-        TIME_THRESH = rratrap_config.TIME_THRESH
-        DM_THRESH = rratrap_config.DM_THRESH
-        MIN_SIGMA = rratrap_config.MIN_SIGMA
-        PLOT = rratrap_config.PLOT
-        PLOTTYPE = rratrap_config.PLOTTYPE
-        RANKS_TO_WRITE = rratrap_config.RANKS_TO_WRITE
-        RANKS_TO_PLOT = rratrap_config.RANKS_TO_PLOT
+        CLOSE_DM = rrattrap_config.CLOSE_DM
+        MIN_GROUP = rrattrap_config.MIN_GROUP
+        TIME_THRESH = rrattrap_config.TIME_THRESH
+        DM_THRESH = rrattrap_config.DM_THRESH
+        MIN_SIGMA = rrattrap_config.MIN_SIGMA
+        PLOT = rrattrap_config.PLOT
+        PLOTTYPE = rrattrap_config.PLOTTYPE
+        RANKS_TO_WRITE = rrattrap_config.RANKS_TO_WRITE
+        RANKS_TO_PLOT = rrattrap_config.RANKS_TO_PLOT
     else:
         CLOSE_DM = options.close_dm
         MIN_GROUP = options.min_group

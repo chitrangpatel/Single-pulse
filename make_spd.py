@@ -196,7 +196,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
                                         Data_zerodm = Data_zerodm.astype(np.float16), \
                                         dm_arr= map(np.float16, dm_arr),\
                                         sigma_arr = map(np.float16, sigma_arr), \
-                                        width_arr =map(np.int8, width_arr),\
+                                        width_arr =map(np.uint8, width_arr),\
                                         dm_list= map(np.float16, dm_list), \
                                         time_list = map(np.float16, time_list), \
                                         text_array = text_array)
