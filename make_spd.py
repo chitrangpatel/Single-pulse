@@ -545,7 +545,7 @@ if __name__=='__main__':
                         default=False)
     options, args = parser.parse_args()
 
-    if not args[0].endswith("fits") or args[0].endswith("fil"):
+    if not (args[0].endswith("fits") or args[0].endswith("fil")):
         raise ValueError("The first file must be a psrFits or a filterbank file! ") 
     if (hasattr(options, 'bandpass_corr')) and (not hasattr(options, 'maskfile')):
         raise ValueError("For bandpass correction you need to supply a mask file.")
