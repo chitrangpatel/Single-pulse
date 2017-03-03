@@ -104,7 +104,7 @@ def make_spd_from_file(spdcand, rawdatafile, \
     if group_rank:
         groups=[group_rank-1]
     else:
-        groups = [i for i in range(6) if(i>=min_rank)][::-1]
+        groups = [i-1 for i in range(8) if(i>=min_rank)][::-1]
      
     for group in groups:
         rank = group+1
