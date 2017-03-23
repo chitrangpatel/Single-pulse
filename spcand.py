@@ -16,7 +16,8 @@ def numsub(nchans, snr):
         if snr < 10:
             nsub = 32
         elif snr >= 10 and snr < 15:
-            nsub = 64
+            nsub = 48
+            #nsub = 64
         else:
             nsub = 96
     else:

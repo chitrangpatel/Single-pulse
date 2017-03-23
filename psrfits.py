@@ -29,8 +29,8 @@ date_obs_re = re.compile(r"^(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-" \
                             "(?:\.[0-9]+)?)$")
 
 # Default global debugging mode
-debug = True 
-
+debug = True
+ 
 def unpack_4bit(data):                       
     """Unpack 4-bit data that has been read in as bytes.
 
@@ -83,7 +83,8 @@ class PsrfitsFile(object):
                 data: Subint data with scales, weights, and offsets
                      applied in float32 dtype with shape (nsamps,nchan).
         """ 
-        subintdata = self.fits['SUBINT'].data[isub]['DATA']
+        self.fits_subint = self.fits['SUBINT'].data[isub]
+        subintdata = self.fits_subint['DATA']
         if self.nbits == 4:
             data = unpack_4bit(subintdata)
         else:
@@ -113,7 +114,7 @@ class PsrfitsFile(object):
             Output:
                 weights: Subint weights. (There is one value for each channel)
         """
-        return self.fits['SUBINT'].data[isub]['DAT_WTS']
+        return self.fits_subint['DAT_WTS']
 
     def get_scales(self, isub):
         """Return scales for a particular subint.
@@ -124,7 +125,7 @@ class PsrfitsFile(object):
             Output:
                 scales: Subint scales. (There is one value for each channel)
         """
-        return self.fits['SUBINT'].data[isub]['DAT_SCL']
+        return self.fits_subint['DAT_SCL']
 
     def get_offsets(self, isub):
         """Return offsets for a particular subint.
@@ -135,9 +136,9 @@ class PsrfitsFile(object):
             Output:
                 offsets: Subint offsets. (There is one value for each channel)
         """
-        return self.fits['SUBINT'].data[isub]['DAT_OFFS']
+        return self.fits_subint['DAT_OFFS']
 
-    def get_spectra(self, startsamp, N):
+    def get_spectra(self, startsamp, N, nsub=None):
         """Return 2D array of data from PSRFITS file.
  
             Inputs:
@@ -152,20 +153,33 @@ class PsrfitsFile(object):
         skip = startsamp - (startsub*self.nsamp_per_subint)
         endsub = int((startsamp+N)/self.nsamp_per_subint)
         trunc = ((endsub+1)*self.nsamp_per_subint) - (startsamp+N)
-        
+        if nsub:
+            nchan_per_sub = 2
+            nchan = self.nchan/2
+            sub_hifreqs = self.freqs[np.arange(nchan)*nchan_per_sub]
+            sub_lofreqs = self.freqs[(1+np.arange(nchan))*nchan_per_sub-1]
+            sub_ctrfreqs = 0.5*(sub_hifreqs+sub_lofreqs)
+            sub_freqs = sub_ctrfreqs
         # Read data
         data = []
         for isub in xrange(startsub, endsub+1):
-            data.append(self.read_subint(isub))
+            if nsub:
+                sub_data = self.read_subint(isub)
+                # Subband
+                sub_data = np.transpose(np.array([np.sum(sub, axis=1) for sub in \
+                                        np.hsplit(sub_data, nchan)]))
+                data.append(sub_data)
+            else:
+                data.append(self.read_subint(isub))
         if len(data) > 1:
             data = np.concatenate(data)
         else:
             data = np.array(data).squeeze()
-	data = np.transpose(data)
-        # Truncate data to desired interval
-	if trunc > 0:
+        data = np.transpose(data)
+        #Truncate data to desired interval
+        if trunc > 0:
             data = data[:, skip:-trunc]
-	elif trunc == 0:
+        elif trunc == 0:
             data = data[:, skip:]
         else:
             raise ValueError("Number of bins to truncate is negative: %d" % trunc)
@@ -176,10 +190,10 @@ class PsrfitsFile(object):
             freqs = self.freqs[::-1]
         else:
             freqs = self.freqs 
-
-	return spectra.Spectra(freqs, self.tsamp, data, \
+        if nsub:
+            freqs = sub_freqs
+        return spectra.Spectra(freqs, self.tsamp, data, \
                                starttime=self.tsamp*startsamp, dm=0)
-
 
 class SpectraInfo:
     def __init__(self, filenames):
@@ -208,7 +222,7 @@ class SpectraInfo:
                 raise ValueError("File '%s' does not appear to be PSRFITS!" % fn)
             
             # Open the PSRFITS file
-            hdus = pyfits.open(fn, mode='readonly')
+            hdus = pyfits.open(fn, mode='readonly', memmap=True)
             
             if ii==0:
                 self.hdu_names = [hdu.name for hdu in hdus]
@@ -299,6 +313,7 @@ class SpectraInfo:
 
             # Now pull stuff from the columns
             subint_hdu = hdus['SUBINT']
+            first_subint = subint_hdu.data[0]
             # Identify the OFFS_SUB column number
             if 'OFFS_SUB' not in subint_hdu.columns.names:
                 warnings.warn("Can't find the 'OFFS_SUB' column!")
@@ -327,7 +342,7 @@ class SpectraInfo:
                 colnum = subint_hdu.columns.names.index('TEL_AZ')
                 if ii==0:
                     self.tel_az_col = colnum
-                    self.azimuth = subint_hdu.data[0]['TEL_AZ']
+                    self.azimuth = first_subint['TEL_AZ']
 
             # Telescope zenith angle
             if 'TEL_ZEN' not in subint_hdu.columns.names:
@@ -336,14 +351,14 @@ class SpectraInfo:
                 colnum = subint_hdu.columns.names.index('TEL_ZEN')
                 if ii==0:
                     self.tel_zen_col = colnum
-                    self.zenith_ang = subint_hdu.data[0]['TEL_ZEN']
+                    self.zenith_ang = first_subint['TEL_ZEN']
 
             # Observing frequencies
             if 'DAT_FREQ' not in subint_hdu.columns.names:
                 warnings.warn("Can't find the channel freq column, 'DAT_FREQ'!")
             else:
                 colnum = subint_hdu.columns.names.index('DAT_FREQ')
-                freqs = subint_hdu.data[0]['DAT_FREQ']
+                freqs = first_subint['DAT_FREQ']
                 if ii==0:
                     self.freqs_col = colnum
                     self.df = freqs[1]-freqs[0]
@@ -373,7 +388,7 @@ class SpectraInfo:
                     self.dat_wts_col = colnum
                 elif self.dat_wts_col != colnum:
                     warnings.warn("'DAT_WTS column changes between files 0 and %d!" % ii)
-                if np.any(subint_hdu.data[0]['DAT_WTS'] != 1.0):
+                if np.any(first_subint['DAT_WTS'] != 1.0):
                     self.need_weight = True
                 
             # Data offsets
@@ -385,7 +400,7 @@ class SpectraInfo:
                     self.dat_offs_col = colnum
                 elif self.dat_offs_col != colnum:
                     warnings.warn("'DAT_OFFS column changes between files 0 and %d!" % ii)
-                if np.any(subint_hdu.data[0]['DAT_OFFS'] != 0.0):
+                if np.any(first_subint['DAT_OFFS'] != 0.0):
                     self.need_offset = True
 
             # Data scalings
@@ -397,7 +412,7 @@ class SpectraInfo:
                     self.dat_scl_col = colnum
                 elif self.dat_scl_col != colnum:
                     warnings.warn("'DAT_SCL' column changes between files 0 and %d!" % ii)
-                if np.any(subint_hdu.data[0]['DAT_SCL'] != 1.0):
+                if np.any(first_subint['DAT_SCL'] != 1.0):
                     self.need_scale = True
 
             # Comute the samples per file and the amount of padding
@@ -409,7 +424,7 @@ class SpectraInfo:
                     self.num_pad[ii-1] = self.start_spec[ii] - self.N
                     self.N += self.num_pad[ii-1]
             self.N += self.num_spec[ii]
-
+#
         # Finished looping through PSRFITS files. Finalise a few things.
         # Convert the position strings into degrees        
         self.ra2000 = coordinates.Angle(self.ra_str,unit=units.hourangle).deg
@@ -521,7 +536,6 @@ class SpectraInfo:
     def __getitem__(self, key):
         return getattr(self, key)
 
-
 def DATEOBS_to_MJD(dateobs):
     """Convert DATE-OBS string from PSRFITS primary HDU to a MJD.
         Returns a 2-tuple:
@@ -535,12 +549,11 @@ def DATEOBS_to_MJD(dateobs):
               float(m.group("month")),float(m.group("day"))), format="iso").mjd
     return mjd_day, mjd_fracday
 
-
 def is_PSRFITS(filename):
     """Return True if filename appears to be PSRFITS format.
         Return False otherwise.
     """
-    hdus = pyfits.open(filename, mode='readonly')
+    hdus = pyfits.open(filename, mode='readonly', memmap=True)
     primary = hdus['PRIMARY'].header
 
     try:
@@ -552,7 +565,6 @@ def is_PSRFITS(filename):
     hdus.close() 
     return isPSRFITS
 
-
 def debug_mode(mode=None):
     """Set debugging mode.
         If 'mode' is None return current debug mode.
@@ -562,7 +574,6 @@ def debug_mode(mode=None):
         return debug
     else:
         debug = bool(mode)
-
 
 def main():
     specinf = SpectraInfo(args.files)
