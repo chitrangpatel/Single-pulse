@@ -50,7 +50,7 @@ def get_mask(rfimask, startsamp, N):
         blockmask[:,rfimask.mask_zap_chans_per_int[blocknum]] = True
         mask[blocknums==blocknum] = blockmask
     return mask.T
-        
+
 def maskfile(maskfn, data, start_bin, nbinsextra):
     rfimask = rfifind.rfifind(maskfn) 
     mask = get_mask(rfimask, start_bin, nbinsextra)
@@ -60,11 +60,10 @@ def maskfile(maskfn, data, start_bin, nbinsextra):
 
     #datacopy = copy.deepcopy(data)
     return data, masked_chans
-
 def waterfall(rawdatafile, start, duration, dm=None, nbins=None, nsub=None,\
               subdm=None, zerodm=False, downsamp=1, scaleindep=False,\
               width_bins=1, mask=False, maskfn=None, bandpass_corr=False, \
-              ref_freq=None):
+              ref_freq=None, save_mem=False):
     """
     Create a waterfall plot (i.e. dynamic specrum) from a raw data file.
     Inputs:
@@ -132,22 +131,28 @@ def waterfall(rawdatafile, start, duration, dm=None, nbins=None, nsub=None,\
     if (start_bin + nbinsextra) > rawdatafile.specinfo.N-1:
         nbinsextra = rawdatafile.specinfo.N-1-start_bin
 
-    data = rawdatafile.get_spectra(start_bin, nbinsextra)
+    if save_mem and subdm > 1000.0:
+        data = rawdatafile.get_spectra(start_bin, nbinsextra, nsub=rawdatafile.nchan/2)
+    else:
+        data = rawdatafile.get_spectra(start_bin, nbinsextra)
 
     # Masking
     if mask and maskfn:
         data, masked_chans = maskfile(maskfn, data, start_bin, nbinsextra)
     else:
-        masked_chans = np.zeros(rawdatafile.nchan,dtype=bool)
+        masked_chans = np.zeros(data.numchans,dtype=bool)
 
     # Bandpass correction
     if maskfn and bandpass_corr:
         bandpass = rfifind.rfifind(maskfn).bandpass_avg[::-1]
+        if save_mem and subdm > 1000:
+            bandpass = np.array([np.mean(sub, axis=0) for sub in \
+                                np.split(bandpass, data.numchans)])
         #bandpass[bandpass == 0] = np.min(bandpass[np.nonzero(bandpass)])
         masked_chans[bandpass == 0] = True
 
         # ignore top and bottom 1% of band
-        ignore_chans = np.ceil(0.01*rawdatafile.nchan) 
+        ignore_chans = np.ceil(0.01*data.numchans) 
         masked_chans[:ignore_chans] = True
         masked_chans[-ignore_chans:] = True
 
@@ -163,15 +168,14 @@ def waterfall(rawdatafile, start, duration, dm=None, nbins=None, nsub=None,\
     if (zerodm == True):
         data.data -=  data.data.mean(axis=0)
 
-    
     # Subband data
     if (nsub is not None) and (subdm is not None):
         data.subband(nsub, subdm, padval='mean')
 
     # Dedisperse
     if dm:
-        data.dedisperse(dm, padval='mean')
-
+        data.dedisperse(dm, padval='mean')   
+    
     # Downsample
     data.downsample(downsamp)
 

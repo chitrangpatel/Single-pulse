@@ -154,10 +154,10 @@ class PsrfitsFile(object):
         endsub = int((startsamp+N)/self.nsamp_per_subint)
         trunc = ((endsub+1)*self.nsamp_per_subint) - (startsamp+N)
         if nsub:
-            nchan_per_sub = 2
-            nchan = self.nchan/2
-            sub_hifreqs = self.freqs[np.arange(nchan)*nchan_per_sub]
-            sub_lofreqs = self.freqs[(1+np.arange(nchan))*nchan_per_sub-1]
+            print "Will subband the data to : %i channels"%nsub
+            nchan_per_sub = self.nchan/nsub
+            sub_hifreqs = self.freqs[np.arange(nsub)*nchan_per_sub]
+            sub_lofreqs = self.freqs[(1+np.arange(nsub))*nchan_per_sub-1]
             sub_ctrfreqs = 0.5*(sub_hifreqs+sub_lofreqs)
             sub_freqs = sub_ctrfreqs
         # Read data
@@ -167,7 +167,7 @@ class PsrfitsFile(object):
                 sub_data = self.read_subint(isub)
                 # Subband
                 sub_data = np.transpose(np.array([np.sum(sub, axis=1) for sub in \
-                                        np.hsplit(sub_data, nchan)]))
+                                        np.hsplit(sub_data, nsub)]))
                 data.append(sub_data)
             else:
                 data.append(self.read_subint(isub))
